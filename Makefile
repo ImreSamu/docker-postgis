@@ -56,7 +56,7 @@ REPO_NAME  ?= postgis
 IMAGE_NAME ?= postgis
 
 DOCKER=docker
-DOCKERHUB_DESC_IMG=peterevans/dockerhub-description:2.1.0
+DOCKERHUB_DESC_IMG=peterevans/dockerhub-description:3
 
 GIT=git
 OFFIMG_LOCAL_CLONE=$(HOME)/official-images
