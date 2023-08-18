@@ -47,7 +47,7 @@ jobs:
            - { version: "16-master", variant: "bookworm", postgres: "16beta3", postgis: "master", arch: "amd64", tags: "16beta3-master-bookworm 16beta3-master", readme_group: "test" }
 #matrix-include-end
 
-    name: ${{ matrix.version }}-${{ matrix.variant }} docker image
+    name: "${{ matrix.version }}-${{ matrix.variant }} docker image"
     runs-on: ubuntu-22.04
     continue-on-error: ${{ matrix.postgis == 'master' }}
 
@@ -55,7 +55,7 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v3
 
-    - name: make test-${{ matrix.version }}-${{ matrix.variant }} tags: ${{ matrix.tags }}
+    - name: "make test-${{ matrix.version }}-${{ matrix.variant }} tags ${{ matrix.tags }}"
       run: make test-${{ matrix.version }}-${{ matrix.variant }}
 
     - name: Login to dockerhub
