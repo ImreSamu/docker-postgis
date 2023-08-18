@@ -18,13 +18,13 @@ This image ensures that the default database created by the parent `postgres` im
 
 Unless `-e POSTGRES_DB` is passed to the container at startup time, this database will be named after the admin user (either `postgres` or the user specified with `-e POSTGRES_USER`). If you would prefer to use the older template database mechanism for enabling PostGIS, the image also provides a PostGIS-enabled template database called `template_postgis`.
 
-# Versions (2023-08-17)
+## Versions (2023-08-18)
 
 Supported architecture: `amd64` (also known as X86-64)"
 
 Recommended version for new users: `postgis/postgis:15-3.4`
 
-### Debian based (recommended)
+### Debian - bookworm  (recommended)
 
 * This Docker-PostGIS version has a cautious release cycle to guarantee high stability.
   * By "cautious", we mean it does not always have the latest versions of geos, proj, gdal, and sfcgal packages.
@@ -33,14 +33,50 @@ Recommended version for new users: `postgis/postgis:15-3.4`
 * This version is easy to extend and has matured over time.
 * PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
+<!-- bookworm_begin  -->
+ 
+| `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
+| ---- | :-: | :-: | :-: | :-: | :-: |
+| [`11-3.3-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-bookworm), [`11-3.3.4-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3.4-bookworm), [`11-3.3`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/bookworm/Dockerfile) | amd64 arm64 | bookworm | 11 | 3.3.4 |
+| [`12-3.4-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-bookworm), [`12-3.4.0-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4.0-bookworm), [`12-3.4`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/12-3.4/bookworm/Dockerfile) | amd64 arm64 | bookworm | 12 | 3.4.0 |
+| [`13-3.4-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4-bookworm), [`13-3.4.0-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4.0-bookworm), [`13-3.4`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/13-3.4/bookworm/Dockerfile) | amd64 arm64 | bookworm | 13 | 3.4.0 |
+| [`14-3.4-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4-bookworm), [`14-3.4.0-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4.0-bookworm), [`14-3.4`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-3.4/bookworm/Dockerfile) | amd64 arm64 | bookworm | 14 | 3.4.0 |
+| [`15-3.4-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4-bookworm), [`15-3.4.0-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4.0-bookworm), [`15-3.4`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4), [`latest`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=latest) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-3.4/bookworm/Dockerfile) | amd64 arm64 | bookworm | 15 | 3.4.0 |
+<!-- bookworm_end  -->
 
-| DockerHub image | Dockerfile | OS | Postgres | PostGIS |
-| --------------- | ---------- | -- | -------- | ------- |
-| [postgis/postgis:11-3.3](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/Dockerfile) | debian:bullseye | 11 | 3.3.4 |
-| [postgis/postgis:12-3.4](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/12-3.4/Dockerfile) | debian:bullseye | 12 | 3.4.0 |
-| [postgis/postgis:13-3.4](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/13-3.4/Dockerfile) | debian:bullseye | 13 | 3.4.0 |
-| [postgis/postgis:14-3.4](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-3.4/Dockerfile) | debian:bullseye | 14 | 3.4.0 |
-| [postgis/postgis:15-3.4](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-3.4/Dockerfile) | debian:bullseye | 15 | 3.4.0 |
+### Debian - bullseye
+
+* We use PostGIS, geos, proj, gdal, and sfcgal packages from the Debian repository.
+  * In the Debian Bullseye repository, the versions are: geos=3.9, gdal=3.2, proj=7.2, and sfcgal=1.3.9.
+* This version is easy to extend and has matured over time.
+* PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
+
+<!-- bullseye_begin  -->
+ 
+| `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
+| ---- | :-: | :-: | :-: | :-: | :-: |
+| [`11-3.3-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-bullseye), [`11-3.3.4-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3.4-bullseye) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/bullseye/Dockerfile) | amd64 | bullseye | 11 | 3.3.4 |
+| [`12-3.4-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-bullseye), [`12-3.4.0-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4.0-bullseye) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/12-3.4/bullseye/Dockerfile) | amd64 | bullseye | 12 | 3.4.0 |
+| [`13-3.4-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4-bullseye), [`13-3.4.0-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4.0-bullseye) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/13-3.4/bullseye/Dockerfile) | amd64 | bullseye | 13 | 3.4.0 |
+| [`14-3.4-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4-bullseye), [`14-3.4.0-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4.0-bullseye) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-3.4/bullseye/Dockerfile) | amd64 | bullseye | 14 | 3.4.0 |
+| [`15-3.4-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4-bullseye), [`15-3.4.0-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4.0-bullseye) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-3.4/bullseye/Dockerfile) | amd64 | bullseye | 15 | 3.4.0 |
+<!-- bullseye_end  -->
+
+### Debian Geo Bundle ( experimental )
+
+This repository provides Debian-based PostGIS Docker images enriched with additional geospatial packages such as pgRouting, ogr-fdw, and others.
+These images serve as a comprehensive solution for various geospatial needs.
+Please note that the included package list is subject to change as we continue to refine the bundle.
+
+<!-- bundle_begin  -->
+ 
+| `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
+| ---- | :-: | :-: | :-: | :-: | :-: |
+| [`12-3.4-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-bundle-bookworm), [`12-3.4.0-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4.0-bundle-bookworm), [`12-3.4-bundle`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-bundle) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/12-3.4-bundle/bookworm/Dockerfile) | amd64 arm64 | bookworm | 12 | 3.4.0 |
+| [`13-3.4-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4-bundle-bookworm), [`13-3.4.0-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4.0-bundle-bookworm), [`13-3.4-bundle`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4-bundle) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/13-3.4-bundle/bookworm/Dockerfile) | amd64 arm64 | bookworm | 13 | 3.4.0 |
+| [`14-3.4-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4-bundle-bookworm), [`14-3.4.0-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4.0-bundle-bookworm), [`14-3.4-bundle`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4-bundle) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-3.4-bundle/bookworm/Dockerfile) | amd64 arm64 | bookworm | 14 | 3.4.0 |
+| [`15-3.4-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4-bundle-bookworm), [`15-3.4.0-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4.0-bundle-bookworm), [`15-3.4-bundle`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4-bundle), [`bundle`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=bundle) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-3.4-bundle/bookworm/Dockerfile) | amd64 arm64 | bookworm | 15 | 3.4.0 |
+<!-- bundle_end  -->
 
 ### Alpine based
 
@@ -49,14 +85,16 @@ Recommended version for new users: `postgis/postgis:15-3.4`
 * PostGIS is compiled from source, making it a bit more challenging to extend.
 * PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
-
-| DockerHub image | Dockerfile | OS | Postgres | PostGIS |
-| --------------- | ---------- | -- | -------- | ------- |
-| [postgis/postgis:11-3.3-alpine](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/alpine/Dockerfile) | alpine:3.18 | 11 | 3.3.4 |
-| [postgis/postgis:12-3.4-alpine](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/12-3.4/alpine/Dockerfile) | alpine:3.18 | 12 | 3.4.0 |
-| [postgis/postgis:13-3.4-alpine](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/13-3.4/alpine/Dockerfile) | alpine:3.18 | 13 | 3.4.0 |
-| [postgis/postgis:14-3.4-alpine](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-3.4/alpine/Dockerfile) | alpine:3.18 | 14 | 3.4.0 |
-| [postgis/postgis:15-3.4-alpine](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-3.4/alpine/Dockerfile) | alpine:3.18 | 15 | 3.4.0 |
+<!-- alpine3.18_begin  -->
+ 
+| `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
+| ---- | :-: | :-: | :-: | :-: | :-: |
+| [`11-3.3-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-alpine3.18), [`11-3.3.4-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3.4-alpine3.18), [`11-3.3-alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/alpine3.18/Dockerfile) | amd64 | alpine3.18 | 11 | 3.3.4 |
+| [`12-3.4-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-alpine3.18), [`12-3.4.0-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4.0-alpine3.18), [`12-3.4-alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/12-3.4/alpine3.18/Dockerfile) | amd64 | alpine3.18 | 12 | 3.4.0 |
+| [`13-3.4-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4-alpine3.18), [`13-3.4.0-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4.0-alpine3.18), [`13-3.4-alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=13-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/13-3.4/alpine3.18/Dockerfile) | amd64 | alpine3.18 | 13 | 3.4.0 |
+| [`14-3.4-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4-alpine3.18), [`14-3.4.0-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4.0-alpine3.18), [`14-3.4-alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-3.4/alpine3.18/Dockerfile) | amd64 | alpine3.18 | 14 | 3.4.0 |
+| [`15-3.4-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4-alpine3.18), [`15-3.4.0-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4.0-alpine3.18), [`15-3.4-alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-3.4-alpine), [`alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-3.4/alpine3.18/Dockerfile) | amd64 | alpine3.18 | 15 | 3.4.0 |
+<!-- alpine3.18_end  -->
 
 ### Test images
 
@@ -64,13 +102,17 @@ Recommended version for new users: `postgis/postgis:15-3.4`
 * The template for the `*-master` images is updated manually, which might lead to a delay of a few weeks sometimes.
 * The ~master SFCGAL version is 1.4 or higher. The cgal version is locked on the [5.6.x-branch](https://github.com/CGAL/cgal/tree/5.6.x-branch).
 
-| DockerHub image | Dockerfile | OS | Postgres | PostGIS |
-| --------------- | ---------- | -- | -------- | ------- |
-| [postgis/postgis:14-master](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-master) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-master/Dockerfile) | debian:bullseye | 14 | development: postgis, geos, proj, gdal |
-| [postgis/postgis:15-master](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-master) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-master/Dockerfile) | debian:bullseye | 15 | development: postgis, geos, proj, gdal |
-| [postgis/postgis:16beta3-3.4](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/16beta3-3.4/Dockerfile) | debian:bullseye | 16beta3 | 3.4.0 |
-| [postgis/postgis:16beta3-3.4-alpine](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/16beta3-3.4/alpine/Dockerfile) | alpine:3.18 | 16beta3 | 3.4.0 |
-| [postgis/postgis:16beta3-master](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-master) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/16beta3-master/Dockerfile) | debian:bullseye | 16beta3 | development: postgis, geos, proj, gdal |
+<!-- test_begin  -->
+ 
+| `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
+| ---- | :-: | :-: | :-: | :-: | :-: |
+| [`14-master-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-master-bookworm), [`14-master`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-master) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-master/bookworm/Dockerfile) | amd64 | bookworm | 14 | development: postgis, geos, proj, gdal |
+| [`15-master-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-master-bookworm), [`15-master`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=15-master) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/15-master/bookworm/Dockerfile) | amd64 | bookworm | 15 | development: postgis, geos, proj, gdal |
+| [`16beta3-3.4-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4-alpine3.18), [`16beta3-3.4.0-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4.0-alpine3.18), [`16beta3-3.4-alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/16-3.4/alpine3.18/Dockerfile) | amd64 | alpine3.18 | 16beta3 | 3.4.0 |
+| [`16beta3-3.4-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4-bookworm), [`16beta3-3.4.0-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4.0-bookworm), [`16beta3-3.4`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/16-3.4/bookworm/Dockerfile) | amd64 arm64 | bookworm | 16beta3 | 3.4.0 |
+| [`16beta3-3.4-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4-bullseye), [`16beta3-3.4.0-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-3.4.0-bullseye) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/16-3.4/bullseye/Dockerfile) | amd64 | bullseye | 16beta3 | 3.4.0 |
+| [`16beta3-master-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-master-bookworm), [`16beta3-master`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=16beta3-master) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/16-master/bookworm/Dockerfile) | amd64 | bookworm | 16beta3 | development: postgis, geos, proj, gdal |
+<!-- test_end  -->
 
 ## Usage
 

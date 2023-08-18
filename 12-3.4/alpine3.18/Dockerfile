@@ -1,12 +1,17 @@
-ARG BASE_IMAGE=postgres:{{ .[env.variant].PG_DOCKER }}-{{ env.variant }}
+#
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
+#       source: "Dockerfile.alpine.template"
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
+ARG BASE_IMAGE=postgres:12-alpine3.18
 FROM ${BASE_IMAGE}
 
 LABEL maintainer="PostGIS Project - https://postgis.net" \
-      org.opencontainers.image.description="PostGIS {{ .[env.variant].POSTGIS_VERSION }} spatial database extension with PostgreSQL {{ .[env.variant].PG_MAJOR }} {{ env.variant }}" \
+      org.opencontainers.image.description="PostGIS 3.4.0 spatial database extension with PostgreSQL 12 alpine3.18" \
       org.opencontainers.image.source="https://github.com/postgis/docker-postgis"
 
-ENV POSTGIS_VERSION {{ .[env.variant].POSTGIS_VERSION }}
-ENV POSTGIS_SHA256 {{ .[env.variant].POSTGIS_SHA256 }}
+ENV POSTGIS_VERSION 3.4.0
+ENV POSTGIS_SHA256 3acdf303adfd58d73543a70e6ebe99af29301262c56cf32220d42caa3efab024
 
 RUN set -eux \
     && apk add --no-cache --virtual .fetch-deps \

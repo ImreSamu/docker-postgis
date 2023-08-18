@@ -1,12 +1,17 @@
+#
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
+#       source: "Dockerfile.master.template"
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
 # "Experimental"; solely for testing purposes. Anticipate frequent changes!
 # This is a multi-stage Dockerfile, requiring a minimum Docker version of 17.05.
 
 ARG DOCKER_CMAKE_BUILD_TYPE=Release
 ARG CGAL_GIT_BRANCH=5.6.x-branch
-FROM postgres:{{ .[env.variant].PG_DOCKER }}-{{ env.variant }} as builder
+FROM postgres:14-bookworm as builder
 
 LABEL maintainer="PostGIS Project - https://postgis.net" \
-      org.opencontainers.image.description="PostGIS - master  spatial database extension with PostgreSQL {{ .[env.variant].PG_MAJOR }} {{ env.variant }}" \
+      org.opencontainers.image.description="PostGIS - master  spatial database extension with PostgreSQL 14 bookworm" \
       org.opencontainers.image.source="https://github.com/postgis/docker-postgis"
 
 WORKDIR /
@@ -16,16 +21,16 @@ RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
       curl \
-      libboost-atomic{{ .[env.variant].BOOST_VERSION }} \
-      libboost-chrono{{ .[env.variant].BOOST_VERSION }} \
-      libboost-date-time{{ .[env.variant].BOOST_VERSION }} \
-      libboost-filesystem{{ .[env.variant].BOOST_VERSION }} \
-      libboost-program-options{{ .[env.variant].BOOST_VERSION }} \
-      libboost-serialization{{ .[env.variant].BOOST_VERSION }} \
-      libboost-system{{ .[env.variant].BOOST_VERSION }} \
-      libboost-test{{ .[env.variant].BOOST_VERSION }} \
-      libboost-thread{{ .[env.variant].BOOST_VERSION }} \
-      libboost-timer{{ .[env.variant].BOOST_VERSION }} \
+      libboost-atomic1.74.0 \
+      libboost-chrono1.74.0 \
+      libboost-date-time1.74.0 \
+      libboost-filesystem1.74.0 \
+      libboost-program-options1.74.0 \
+      libboost-serialization1.74.0 \
+      libboost-system1.74.0 \
+      libboost-test1.74.0 \
+      libboost-thread1.74.0 \
+      libboost-timer1.74.0 \
       libcurl3-gnutls \
       libexpat1 \
       libgmp10 \
@@ -33,11 +38,7 @@ RUN set -ex \
       libjson-c5 \
       libmpfr6 \
       libprotobuf-c1 \
-{{ if env.variant != "bullseye" then ( -}}
       libtiff6 \
-{{ ) else ( -}}
-      libtiff5 \
-{{ ) end -}}
       libxml2 \
       sqlite3 \
       # build dependency
@@ -88,8 +89,8 @@ ENV DOCKER_CMAKE_BUILD_TYPE=${DOCKER_CMAKE_BUILD_TYPE}
 # one can benefit from the latest CGAL patches while avoiding compatibility issues.
 ARG CGAL_GIT_BRANCH
 ENV CGAL_GIT_BRANCH=${CGAL_GIT_BRANCH}
-ENV CGAL5X_GIT_HASH {{ .[env.variant].CGAL5X_GIT_HASH }}
-ENV SFCGAL_GIT_HASH {{ .[env.variant].SFCGAL_GIT_HASH }}
+ENV CGAL5X_GIT_HASH d0b188bf41704a155c9ad72fd7635f7a709764e5
+ENV SFCGAL_GIT_HASH ae0a12da1e7a32d163930789e62874ca6ff0792c
 RUN set -ex \
     && mkdir -p /usr/src \
     && cd /usr/src \
@@ -122,7 +123,7 @@ RUN set -ex \
     && rm -fr /usr/src/cgal
 
 # proj
-ENV PROJ_GIT_HASH {{ .[env.variant].PROJ_GIT_HASH }}
+ENV PROJ_GIT_HASH 8b0029e6db9f2f601e6ade2dbbf0c59d70939bc0
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/OSGeo/PROJ.git \
@@ -152,7 +153,7 @@ RUN set -ex \
     && rm -fr /usr/src/PROJ
 
 # geos
-ENV GEOS_GIT_HASH {{ .[env.variant].GEOS_GIT_HASH }}
+ENV GEOS_GIT_HASH 40da3a61338068549eabe19f68d1cf082cece853
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/libgeos/geos.git \
@@ -168,7 +169,7 @@ RUN set -ex \
     && rm -fr /usr/src/geos
 
 # gdal
-ENV GDAL_GIT_HASH {{ .[env.variant].GDAL_GIT_HASH }}
+ENV GDAL_GIT_HASH df922181ac7d2559b3d41a871c897f1cd5bc2919
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/OSGeo/gdal.git \
@@ -252,7 +253,7 @@ RUN set -ex \
 # -------------------------------------------
 # STAGE  final
 # -------------------------------------------
-FROM postgres:{{ .[env.variant].PG_DOCKER }}-{{ env.variant }}
+FROM postgres:14-bookworm
 
 ARG DOCKER_CMAKE_BUILD_TYPE
 ENV DOCKER_CMAKE_BUILD_TYPE=${DOCKER_CMAKE_BUILD_TYPE}
@@ -261,16 +262,16 @@ RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
       curl \
-      libboost-atomic{{ .[env.variant].BOOST_VERSION }} \
-      libboost-chrono{{ .[env.variant].BOOST_VERSION }} \
-      libboost-date-time{{ .[env.variant].BOOST_VERSION }} \
-      libboost-filesystem{{ .[env.variant].BOOST_VERSION }} \
-      libboost-program-options{{ .[env.variant].BOOST_VERSION }} \
-      libboost-serialization{{ .[env.variant].BOOST_VERSION }} \
-      libboost-system{{ .[env.variant].BOOST_VERSION }} \
-      libboost-test{{ .[env.variant].BOOST_VERSION }} \
-      libboost-thread{{ .[env.variant].BOOST_VERSION }} \
-      libboost-timer{{ .[env.variant].BOOST_VERSION }} \
+      libboost-atomic1.74.0 \
+      libboost-chrono1.74.0 \
+      libboost-date-time1.74.0 \
+      libboost-filesystem1.74.0 \
+      libboost-program-options1.74.0 \
+      libboost-serialization1.74.0 \
+      libboost-system1.74.0 \
+      libboost-test1.74.0 \
+      libboost-thread1.74.0 \
+      libboost-timer1.74.0 \
       libcurl3-gnutls \
       libexpat1 \
       libgmp10 \
@@ -279,20 +280,12 @@ RUN set -ex \
       libmpfr6 \
       libpcre3 \
       libprotobuf-c1 \
-{{ if env.variant != "bullseye" then ( -}}
       libtiff6 \
-{{ ) else ( -}}
-      libtiff5 \
-{{ ) end -}}
       libxml2 \
       sqlite3 \
       # gdal+
       libblosc1 \
-{{ if env.variant != "bullseye" then ( -}}
       libcfitsio10 \
-{{ ) else ( -}}
-      libcfitsio9 \
-{{ ) end -}}
       libfreexl1 \
       libfyba0 \
       libhdf5-103-1 \
@@ -309,11 +302,11 @@ COPY --from=builder /usr/local /usr/local
 
 ARG CGAL_GIT_BRANCH
 ENV CGAL_GIT_BRANCH=${CGAL_GIT_BRANCH}
-ENV CGAL5X_GIT_HASH {{ .[env.variant].CGAL5X_GIT_HASH }}
-ENV SFCGAL_GIT_HASH {{ .[env.variant].SFCGAL_GIT_HASH }}
-ENV PROJ_GIT_HASH {{ .[env.variant].PROJ_GIT_HASH }}
-ENV GEOS_GIT_HASH {{ .[env.variant].GEOS_GIT_HASH }}
-ENV GDAL_GIT_HASH {{ .[env.variant].GDAL_GIT_HASH }}
+ENV CGAL5X_GIT_HASH d0b188bf41704a155c9ad72fd7635f7a709764e5
+ENV SFCGAL_GIT_HASH ae0a12da1e7a32d163930789e62874ca6ff0792c
+ENV PROJ_GIT_HASH 8b0029e6db9f2f601e6ade2dbbf0c59d70939bc0
+ENV GEOS_GIT_HASH 40da3a61338068549eabe19f68d1cf082cece853
+ENV GDAL_GIT_HASH df922181ac7d2559b3d41a871c897f1cd5bc2919
 
 # Minimal command line test ( fail fast )
 RUN set -ex \
@@ -332,7 +325,7 @@ RUN set -ex \
             || echo "ogr2ogr missing PostgreSQL driver" && exit 1
 
 # install postgis
-ENV POSTGIS_GIT_HASH {{ .[env.variant].POSTGIS_GIT_HASH }}
+ENV POSTGIS_GIT_HASH 7905ec144ecee9896238a58c0883bd3e4c7a2854
 
 RUN set -ex \
     && apt-get update \
