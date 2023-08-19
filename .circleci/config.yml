@@ -1,20 +1,22 @@
 # .circleci/config.yml
 version: 2.1
 
+# Circle CI arm64 builder
+
 jobs:
   build_arm64:
     machine:
       image: ubuntu-2204:current
     resource_class: arm.medium
     parameters:
-      version:
-        type: string
-      variant:
+      target-version-variant:
         type: string
     steps:
       - checkout
       - run: uname -a
-      - run: make test-<< parameters.version >>-<< parameters.variant >>
+      - run: docker --version
+      - run: docker info
+      - run: make test-<< parameters.target-version-variant >>
       - run: docker images
 
 workflows:
@@ -23,12 +25,16 @@ workflows:
       - build_arm64:
           matrix:
             parameters:
-              version: ["15-3.4"]
-              variant: ["bookworm"]
-
-
-#              #matrix-include-start
-#              - { version: "14-3.4", variant: "alpine3.18" }
-#              - { version: "14-3.4", variant: "bookworm" }
-#              - { version: "15-3.4", variant: "bookworm" }
-#              #matrix-include-end
+              target-version-variant: [
+#circleci-targets-start
+                "12-3.4-bookworm",
+                "12-3.4-bullseye",
+                "13-3.4-bookworm",
+                "13-3.4-bullseye",
+                "14-3.4-bookworm",
+                "14-3.4-bullseye",
+                "15-3.4-alpine3.18",
+                "15-3.4-bookworm",
+                "15-3.4-bullseye"
+#circleci-targets-end
+              ]
