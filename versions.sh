@@ -395,7 +395,7 @@ for version in "${versions[@]}"; do
 
                 if [[ "master" == "$postgisVersion" ]]; then
                     {
-                        printf "    arch: '%s'\n" "amd64"
+                        printf "    arch: '%s'\n" "amd64 arm64"
                         printf "    template: '%s'\n" "Dockerfile.master.template"
                         printf "    POSTGIS_GIT_HASH: '%s'\n" "$postgisGitHash"
                         printf "    CGAL5X_GIT_HASH: '%s'\n" "$cgal5XGitHash"
@@ -472,7 +472,7 @@ for version in "${versions[@]}"; do
                     printf "    tags: '%s'\n" "$tags"
                     printf "    readme_group: '%s'\n" "$readme_group"
                     printf "    postgis: '%s'\n" "${postgisDockerTag}"
-                    printf "    arch: '%s'\n" "amd64"
+                    printf "    arch: '%s'\n" "amd64 arm64"
                     printf "    template: '%s'\n" "Dockerfile.alpine.template"
                     printf "    PG_MAJOR: '%s'\n" "$postgresVersion"
                     printf "    PG_DOCKER: '%s'\n" "${postgresLastMainTags[$postgresVersion]}"
