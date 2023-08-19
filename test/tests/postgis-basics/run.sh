@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2119,SC2120
 set -e
 
 image="$1"
@@ -9,7 +10,7 @@ export POSTGRES_DB='my cool postgres database'
 
 cname="postgis-container-$RANDOM-$RANDOM"
 cid="$(docker run -d -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB --name "$cname" "$image")"
-trap "docker rm -vf $cid > /dev/null" EXIT
+trap 'docker rm -vf "$cid" > /dev/null' EXIT
 
 psql() {
 	docker run --rm -i \
@@ -42,9 +43,9 @@ echo 'SELECT PostGIS_Version()' | psql
 ## test address_standardizer extension
 echo 'CREATE EXTENSION address_standardizer;' | psql
 response=$(echo $'SELECT zip FROM parse_address(\'1 Devonshire Place, Boston, MA 02109-1234\') AS a;' | psql)
-if [ $response  = 02109 ]; then 
+if [ "$response"  = "02109" ]; then
 	echo "address_standardizer extension installed and works!"
-else 
+else
 	echo "address_standardizer extension test failed, returned response is $response"
 	exit 1
 fi

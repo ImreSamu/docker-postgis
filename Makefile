@@ -22,8 +22,10 @@ OFFIMG_REPO_URL ?=https://github.com/docker-library/official-images.git
 # Default target: help
 .DEFAULT_GOAL := help
 
-# Dynamically determine versions and variants based on the existence of Dockerfile at the depth of two directories
-DOCKERFILE_DIRS := $(shell find . -mindepth 2 -maxdepth 2 -type d -exec test -e '{}/Dockerfile' \; -print | sed 's|./||')
+# Dynamically determine versions and variants based on
+#   the existence of Dockerfile at the depth of two directories
+#     where the first directory names starting with a number.
+DOCKERFILE_DIRS := $(shell find . -mindepth 2 -maxdepth 2 -type d -exec test -e '{}/Dockerfile' \; -print | sed 's|./||' | awk '/^[0-9]/ {print}')
 VERSIONS := $(sort $(shell echo '$(DOCKERFILE_DIRS)' | tr ' ' '\n' | cut -d'/' -f1))
 VARIANTS := $(sort $(shell echo '$(DOCKERFILE_DIRS)' | tr ' ' '\n' | cut -d'/' -f2))
 

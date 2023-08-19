@@ -25,19 +25,21 @@ export IMAGE_NAME="test_postgis"
 ./update.sh
 
 # check commands
-make -n push-14-3.4-bookworm
-make -n push-16-3.4-bundle-bookworm
+make -n push-15-3.4-bookworm
+make -n push-15-3.4-bundle-bookworm
 
 # run commands
-make push-16-3.4-bundle-bookworm
-
+make push-15-3.4-bundle-bookworm
 
 # check registy
 curl --location --silent --request GET 'http://localhost:5000/v2/_catalog?page=1' | jq '.'
 curl --location --silent --request GET 'http://localhost:5000/v2/test_postgis_repo/test_postgis/tags/list?page=1' | jq '.'
 
-
-
+echo " "
+echo "WARNING:  Be carefull and not push the .localtest.sh script generated Dockerfiles,"
+echp "          because contains reference to the test REGISTRY, REPO_NAME and IMAGE_NAME!"
+echo ""
+echo "done."
 exit 0
 
 #  REGISTRY=localhost:5000  make push-15-3.4-bundle

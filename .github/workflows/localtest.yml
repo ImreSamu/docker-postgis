@@ -1,0 +1,16 @@
+name: "Localtest"
+
+on:
+    push:
+    pull_request:
+    schedule:
+        - cron: '15 5 * * 1'
+
+jobs:
+  localtest:
+    name: "testing ./localtest.sh with update.sh and push to local registry"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: ./localtest.sh
+
