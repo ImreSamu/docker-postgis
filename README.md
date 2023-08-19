@@ -34,7 +34,6 @@ Recommended version for new users: `postgis/postgis:15-3.4`
 * PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
 <!-- bookworm_begin  -->
- 
 | `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
 | ---- | :-: | :-: | :-: | :-: | :-: |
 | [`11-3.3-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-bookworm), [`11-3.3.4-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3.4-bookworm), [`11-3.3`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/bookworm/Dockerfile) | amd64 arm64 | bookworm | 11 | 3.3.4 |
@@ -52,7 +51,6 @@ Recommended version for new users: `postgis/postgis:15-3.4`
 * PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
 <!-- bullseye_begin  -->
- 
 | `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
 | ---- | :-: | :-: | :-: | :-: | :-: |
 | [`11-3.3-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-bullseye), [`11-3.3.4-bullseye`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3.4-bullseye) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/bullseye/Dockerfile) | amd64 | bullseye | 11 | 3.3.4 |
@@ -64,12 +62,11 @@ Recommended version for new users: `postgis/postgis:15-3.4`
 
 ### Debian Geo Bundle ( experimental )
 
-This repository provides Debian-based PostGIS Docker images enriched with additional geospatial packages such as pgRouting, ogr-fdw, and others.
-These images serve as a comprehensive solution for various geospatial needs.
+This repository provides Debian-based PostGIS Docker images enriched with additional geospatial packages such as [pgRouting](https://pgrouting.org/), [h3-pg]( https://github.com/zachasme/h3-pg), [pgsql-ogr-fdw](https://github.com/pramsey/pgsql-ogr-fdw), [MobilityDB](https://mobilitydb.com/), [PL/Python3](https://www.postgresql.org/docs/current/plpython.html), [pgPointcloud](https://pgpointcloud.github.io/pointcloud/), [pgVector](https://github.com/pgvector/pgvector), [TimeScaleDB](https://www.timescale.com/) and others.
+These images serve as a comprehensive solution for various server side geospatial needs.
 Please note that the included package list is subject to change as we continue to refine the bundle.
 
 <!-- bundle_begin  -->
- 
 | `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
 | ---- | :-: | :-: | :-: | :-: | :-: |
 | [`12-3.4-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-bundle-bookworm), [`12-3.4.0-bundle-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4.0-bundle-bookworm), [`12-3.4-bundle`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=12-3.4-bundle) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/12-3.4-bundle/bookworm/Dockerfile) | amd64 arm64 | bookworm | 12 | 3.4.0 |
@@ -86,7 +83,6 @@ Please note that the included package list is subject to change as we continue t
 * PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
 <!-- alpine3.18_begin  -->
- 
 | `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
 | ---- | :-: | :-: | :-: | :-: | :-: |
 | [`11-3.3-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-alpine3.18), [`11-3.3.4-alpine3.18`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3.4-alpine3.18), [`11-3.3-alpine`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=11-3.3-alpine) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/11-3.3/alpine3.18/Dockerfile) | amd64 | alpine3.18 | 11 | 3.3.4 |
@@ -103,7 +99,6 @@ Please note that the included package list is subject to change as we continue t
 * The ~master SFCGAL version is 1.4 or higher. The cgal version is locked on the [5.6.x-branch](https://github.com/CGAL/cgal/tree/5.6.x-branch).
 
 <!-- test_begin  -->
- 
 | `postgis/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
 | ---- | :-: | :-: | :-: | :-: | :-: |
 | [`14-master-bookworm`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-master-bookworm), [`14-master`](https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=14-master) | [Dockerfile](https://github.com/postgis/docker-postgis/blob/master/14-master/bookworm/Dockerfile) | amd64 | bookworm | 14 | development: postgis, geos, proj, gdal |

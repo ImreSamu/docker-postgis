@@ -24,7 +24,6 @@ distinct_variants=$(jq -r 'to_entries[] | .value | keys[]' "$input_file" | sort 
 rm -f _dockerlists_*.md
 for readme_group in $distinct_variants bundle test; do
     echo "init _dockerlists_${readme_group}.md"
-    echo " " >_dockerlists_"${readme_group}".md
     echo "| \`$dockername:\` tags | Dockerfile | Arch | OS | Postgres | PostGIS |" >>_dockerlists_"${readme_group}".md
     echo "| ---- | :-: | :-: | :-: | :-: | :-: |" >>_dockerlists_"${readme_group}".md
 done
