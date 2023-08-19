@@ -33,8 +33,7 @@ workflows:
                 "13-3.4-bullseye",
                 "14-3.4-bookworm",
                 "14-3.4-bullseye",
-                "15-3.4-alpine3.18",
                 "15-3.4-bookworm",
-                "15-3.4-bullseye"
+                "15-3.4-bullseye",
 #circleci-targets-end
               ]
