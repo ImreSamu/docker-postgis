@@ -3,13 +3,13 @@ set -Eeuo pipefail
 
 # Check if the container with name "registry" is already running
 # https://docs.docker.com/registry/deploying/
-if ! docker ps -q -f name=registry; then
+if ! docker ps -q -f name=localregistry; then
     # If not running, run the command
-    docker run -d -p 5000:5000 --restart=always --name registry registry:2
+    docker run -d -p 5000:5000 --restart=always --name testregistry registry:2
     # -v /mnt/registry:/var/lib/registry \
 else
     # If running, output a message
-    echo "Container with name 'registry' is already running"
+    echo "Container with name 'testregistry' is already running"
 fi
 
 
@@ -38,7 +38,7 @@ curl --location --silent --request GET 'http://localhost:5000/v2/test_postgis_re
 echo " "
 echo "WARNING:  Be carefull and not push the .localtest.sh script generated Dockerfiles,"
 echp "          because contains reference to the test REGISTRY, REPO_NAME and IMAGE_NAME!"
-echo ""
+echo " "
 echo "done."
 exit 0
 

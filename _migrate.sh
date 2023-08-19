@@ -1,32 +1,34 @@
 #!/bin/sh
 
+# temporary files, only for the migration.
+# will be removed...
+
 debian_move(){
-    mkdir -p $1/bullseye
-    mkdir -p $1/bookworm
+    mkdir -p "$1/bullseye"
+    mkdir -p "$1/bookworm"
 
-    git mv $1/Dockerfile          $1/bullseye/Dockerfile
-    git mv $1/initdb-postgis.sh   $1/bullseye/initdb-postgis.sh
-    git mv $1/update-postgis.sh   $1/bullseye/update-postgis.sh
+    git mv "$1/Dockerfile"          "$1/bullseye/Dockerfile"
+    git mv "$1/initdb-postgis.sh"   "$1/bullseye/initdb-postgis.sh"
+    git mv "$1/update-postgis.sh"   "$1/bullseye/update-postgis.sh"
 
-    cp $1/bullseye/Dockerfile          $1/bookworm/Dockerfile
-    cp $1/bullseye/initdb-postgis.sh   $1/bookworm/initdb-postgis.sh
-    cp $1/bullseye/update-postgis.sh   $1/bookworm/update-postgis.sh
+    cp "$1/bullseye/Dockerfile"          "$1/bookworm/Dockerfile"
+    cp "$1/bullseye/initdb-postgis.sh"   "$1/bookworm/initdb-postgis.sh"
+    cp "$1/bullseye/update-postgis.sh"   "$1/bookworm/update-postgis.sh"
 
-    git add $1/bookworm/Dockerfile
-    git add $1/bookworm/initdb-postgis.sh
-    git add $1/bookworm/update-postgis.sh
-
+    git add "$1/bookworm/Dockerfile"
+    git add "$1/bookworm/initdb-postgis.sh"
+    git add "$1/bookworm/update-postgis.sh"
 }
 
 bookworm_move(){
-    mkdir -p $1/bookworm
-    git mv $1/Dockerfile          $1/bookworm/Dockerfile
-    git mv $1/initdb-postgis.sh   $1/bookworm/initdb-postgis.sh
-    git mv $1/update-postgis.sh   $1/bookworm/update-postgis.sh
+    mkdir -p "$1/bookworm"
+    git mv "$1/Dockerfile"          "$1/bookworm/Dockerfile"
+    git mv "$1/initdb-postgis.sh"   "$1/bookworm/initdb-postgis.sh"
+    git mv "$1/update-postgis.sh"   "$1/bookworm/update-postgis.sh"
 }
 
 alpine_move() {
-    git mv $1/alpine              $1/alpine3.18
+    git mv "$1/alpine"              "$1/alpine3.18"
 }
 
 debian_move 11-3.3
@@ -51,7 +53,7 @@ git mv 16beta3-3.4    16-3.4
 git mv 16beta3-master 16-master
 
 
-git mv Dockerfile.template Dockerfile.debian.template 
+git mv Dockerfile.template Dockerfile.debian.template
 
 
 mkdir -p 12-3.4-bundle
