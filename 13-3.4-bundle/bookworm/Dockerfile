@@ -31,11 +31,22 @@ RUN set -ex \
       libgsl-dev \
       libjson-c-dev \
       libproj-dev \
+      # TimescaleDB
+      libkrb5-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install: https://github.com/zachasme/h3-pg
-RUN pgxn install h3
+
+# Install TimescaleDB from source ( no arm64 binary yet )
+RUN    mkdir -p /MobilityDB \
+    && git clone --depth 1 --branch 2.11.2 https://github.com/timescale/timescaledb.git  /timescaledb \
+    && cd timescaledb \
+    && ./bootstrap  -DCMAKE_BUILD_TYPE=Release \
+                    -DSEND_TELEMETRY_DEFAULT=false \
+                    -DREGRESS_CHECKS=false \
+    && cd build \
+    && make -j$(nproc) \
+    && make install
 
 # Install MobilityDB
 RUN    mkdir -p /MobilityDB \
@@ -46,9 +57,11 @@ RUN    mkdir -p /MobilityDB \
              -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
              -DCMAKE_POLICY_DEFAULT_CMP0069=NEW \
              .. \
-    && make \
+    && make -j$(nproc) \
     && make install
 
+# Install: https://github.com/zachasme/h3-pg
+RUN pgxn install h3
 
 
 FROM ${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}:13-3.4-bookworm
@@ -61,24 +74,11 @@ LABEL maintainer="PostGIS Project - https://postgis.net" \
 RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        wget \
-        lsb-release \
-    # https://docs.timescale.com/self-hosted/latest/install/installation-linux/ \
-    && echo "deb https://packagecloud.io/timescale/timescaledb/debian/ `lsb_release -c -s` main" | tee /etc/apt/sources.list.d/timescaledb.list \
-    && wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | apt-key add - \
-    \
-    && apt-get purge -y --autoremove \
-        wget \
-        lsb-release \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN set -ex \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
         postgresql-$PG_MAJOR-cron \
         postgresql-$PG_MAJOR-icu-ext \
         postgresql-$PG_MAJOR-ogr-fdw \
+        postgresql-$PG_MAJOR-pg-failover-slots \
+        postgresql-$PG_MAJOR-pgaudit \
         postgresql-$PG_MAJOR-pgrouting \
         postgresql-$PG_MAJOR-pgrouting-scripts \
         postgresql-$PG_MAJOR-pgvector \
@@ -91,9 +91,6 @@ RUN set -ex \
         postgresql-plpython3-$PG_MAJOR \
         postgresql-postgis-scripts \
         \
-        timescaledb-2-postgresql-$PG_MAJOR \
-        timescaledb-tools \
-        \
         # add MobilityDb missing dependency from libgsl-dev
         libgsl27 \
     && apt-get clean \
@@ -105,6 +102,14 @@ COPY --from=builder /usr/lib/postgresql/$PG_MAJOR/lib          /usr/lib/postgres
 
 # check dependencies
 RUN set -ex \
-   && ldd /usr/lib/postgresql/15/lib/h3.so | grep 'not found' && exit 1 || true \
-   && ldd /usr/lib/postgresql/15/lib/h3_postgis.so | grep 'not found' && exit 1 || true \
-   && ldd /usr/lib/postgresql/15/lib/libMobilityDB-1.1.so | grep 'not found' && exit 1 || true
+   && ldd /usr/lib/postgresql/15/lib/h3*.so            | grep 'not found' && exit 1 || true \
+   && ldd /usr/lib/postgresql/15/lib/timescaledb*.so   | grep 'not found' && exit 1 || true \   
+   && ldd /usr/lib/postgresql/15/lib/libMobilityDB*.so | grep 'not found' && exit 1 || true
+
+RUN set -eux; \
+	cp -v /usr/share/postgresql/postgresql.conf.sample /usr/share/postgresql/postgresql.conf.sample.orig; \
+	echo "shared_preload_libraries = 'postgis-3,timescaledb'" >>  /usr/share/postgresql/postgresql.conf.sample; \
+    # MobilityDB recomendation
+	echo "max_locks_per_transaction = 128" >>  /usr/share/postgresql/postgresql.conf.sample;
+
+# TODO: more test:  shared_preload_libraries = 'postgis-3,timescaledb'
