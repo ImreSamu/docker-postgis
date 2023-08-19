@@ -74,6 +74,8 @@ RUN set -ex \
         postgresql-$PG_MAJOR-cron \
         postgresql-$PG_MAJOR-icu-ext \
         postgresql-$PG_MAJOR-ogr-fdw \
+        postgresql-$PG_MAJOR-pg-failover-slots \
+        postgresql-$PG_MAJOR-pgaudit \
         postgresql-$PG_MAJOR-pgrouting \
         postgresql-$PG_MAJOR-pgrouting-scripts \
         postgresql-$PG_MAJOR-pgvector \

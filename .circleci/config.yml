@@ -1,0 +1,34 @@
+# .circleci/config.yml
+version: 2.1
+
+jobs:
+  build_arm64:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: arm.medium
+    parameters:
+      version:
+        type: string
+      variant:
+        type: string
+    steps:
+      - checkout
+      - run: uname -a
+      - run: make test-<< parameters.version >>-<< parameters.variant >>
+      - run: docker images
+
+workflows:
+  build-deploy:
+    jobs:
+      - build_arm64:
+          matrix:
+            parameters:
+              version: ["15-3.4"]
+              variant: ["bookworm"]
+
+
+#              #matrix-include-start
+#              - { version: "14-3.4", variant: "alpine3.18" }
+#              - { version: "14-3.4", variant: "bookworm" }
+#              - { version: "15-3.4", variant: "bookworm" }
+#              #matrix-include-end

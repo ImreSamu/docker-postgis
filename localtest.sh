@@ -48,7 +48,7 @@ docker images | grep "${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}"
 echo " "
 echo " ---- Registry info ---- "
 curl --location --silent --request GET 'http://localhost:5000/v2/_catalog?page=1' | jq '.'
-curl --location --silent --request GET 'http://localhost:5000/v2/test_postgis_repo/test_postgis/tags/list?page=1' | jq '.'
+curl --location --silent --request GET 'http://localhost:5000/v2/${REPO_NAME}/${IMAGE_NAME}/tags/list?page=1' | jq '.'
 
 echo " "
 echo "WARNING:  Be carefull and not push the .localtest.sh script generated Dockerfiles,"
