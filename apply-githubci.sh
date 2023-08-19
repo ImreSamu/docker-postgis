@@ -6,6 +6,7 @@ set -Eeuo pipefail
 input_file="versions.json"
 # cleaning the workfile
 rm -f _matrix.yml
+rm -f _circleci_arm64.yml
 
 versions=$(jq 'keys[]' "$input_file")
 
@@ -43,12 +44,23 @@ for version in $versions; do
         arch=$(jq -r ".\"$version\".\"$variant\".arch" "$input_file")
         readme_group=$(jq -r ".\"$version\".\"$variant\".readme_group" "$input_file")
 
-        if [[ $versions_bundle_base =~ ${version}-${variant} ]]; then
-            echo "### ${version}-${variant} is generated with the bundle version!" >>_matrix.yml
-            echo "###        - { version: \"$version\", variant: \"$variant\", postgres: \"$pg_docker\", postgis: \"$postgis\", arch: \"$arch\", tags: \"$tags\", readme_group: \"$readme_group\" }" >>_matrix.yml
-        else
-            echo "           - { version: \"$version\", variant: \"$variant\", postgres: \"$pg_docker\", postgis: \"$postgis\", arch: \"$arch\", tags: \"$tags\", readme_group: \"$readme_group\" }" >>_matrix.yml
+        if [[ $arch == *"amd64"* ]]; then
+            if [[ $versions_bundle_base =~ ${version}-${variant} ]]; then
+                echo "### ${version}-${variant} is generated with the bundle version!" >>_matrix.yml
+                echo "###        - { version: \"$version\", variant: \"$variant\", postgres: \"$pg_docker\", postgis: \"$postgis\", arch: \"$arch\", tags: \"$tags\", readme_group: \"$readme_group\" }" >>_matrix.yml
+            else
+                echo "           - { version: \"$version\", variant: \"$variant\", postgres: \"$pg_docker\", postgis: \"$postgis\", arch: \"$arch\", tags: \"$tags\", readme_group: \"$readme_group\" }" >>_matrix.yml
+            fi
         fi
+
+        if [[ $arch == *"arm64"* ]]; then
+            if [[ $versions_bundle_base =~ ${version}-${variant} ]]; then
+                echo "#   --skip--    \"${version}-${variant}\",  -->  generated with the related bundle job!"  >>_circleci_arm64.yml
+            else
+                echo "                \"${version}-${variant}\","     >>_circleci_arm64.yml
+            fi
+        fi
+
     done
 done
 
@@ -61,3 +73,15 @@ $0 ~ "#matrix-include-end" {f=0}
 
 echo "## _matrix.yml ## "
 cat _matrix.yml
+
+
+# ------------- Update .circleci/config.yml ------------------
+echo "## update .circleci/config.yml ##"
+awk -v content="$(<_circleci_arm64.yml)" '
+$0 ~ "#circleci-targets-start" {print; print content; f=1; next}
+$0 ~ "#circleci-targets-end" {f=0}
+!f' .circleci/config.yml >.circleci/config.tmp && mv .circleci/config.tmp .circleci/config.yml
+
+echo "## _circleci_arm64.yml ##"
+cat _circleci_arm64.yml
+
