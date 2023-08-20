@@ -2,6 +2,8 @@
 version: 2.1
 
 # Circle CI arm64 builder
+orbs:
+  docker: circleci/docker@2.1.4
 
 jobs:
   build-arm64:
@@ -32,6 +34,11 @@ jobs:
             fi
       - run: docker --version
       - run: docker info
+      - docker/check:
+          registry: docker.io
+          repo: $REPO_NAME
+          docker-username: $DOCKERHUB_USERNAME
+          docker-password: $DOCKERHUB_ACCESS_TOKEN
       - run: make test-<< parameters.target-version-variant >>
       - run: docker images
       - run:
@@ -43,11 +50,7 @@ jobs:
               circleci-agent step halt
             fi
 
-      - docker/check:
-          registry: docker.io
-          repo: $REPO_NAME
-          docker-username: $DOCKERHUB_USERNAME
-          docker-password: $DOCKERHUB_ACCESS_TOKEN
+
 
       - run:
           name: "Push docker image : make push-<< parameters.target-version-variant >>" 
