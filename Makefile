@@ -4,6 +4,9 @@
 #    docker run -d -p 5000:5000 --restart=always --name registry registry:2
 #    with REGISTRY ?= localhost:5000
 
+-include .env
+export
+
 REGISTRY ?= docker.io
 REPO_NAME  ?= postgis
 IMAGE_NAME ?= postgis

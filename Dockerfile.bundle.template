@@ -1,9 +1,8 @@
 
 # set the base image
-ARG REGISTRY=docker.io
-ARG REPO_NAME=postgis
-ARG IMAGE_NAME=postgis
-
+ARG REGISTRY={{ env.REGISTRY }}
+ARG REPO_NAME={{ env.REPO_NAME }}
+ARG IMAGE_NAME={{ env.IMAGE_NAME }}
 
 FROM ${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}:{{ .[env.variant].PG_DOCKER }}-{{ .[env.variant].postgis }}-{{ env.variant }} AS builder
 

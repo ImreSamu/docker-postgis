@@ -15,29 +15,29 @@ jobs:
     strategy:
       matrix:
         include:
+#
+#  These "--skip--" images serve as inputs for the bundle images,
+#       hence they must be generated within the same JOB.
+#
 #matrix-include-start
            - { version: "11-3.3", variant: "alpine3.18", postgres: "11", postgis: "3.3", arch: "amd64", tags: "11-3.3-alpine3.18 11-3.3.4-alpine3.18 11-3.3-alpine", readme_group: "alpine3.18" }
            - { version: "11-3.3", variant: "bookworm", postgres: "11", postgis: "3.3", arch: "amd64 arm64", tags: "11-3.3-bookworm 11-3.3.4-bookworm 11-3.3", readme_group: "bookworm" }
            - { version: "11-3.3", variant: "bullseye", postgres: "11", postgis: "3.3", arch: "amd64", tags: "11-3.3-bullseye 11-3.3.4-bullseye", readme_group: "bullseye" }
            - { version: "12-3.4", variant: "alpine3.18", postgres: "12", postgis: "3.4", arch: "amd64", tags: "12-3.4-alpine3.18 12-3.4.0-alpine3.18 12-3.4-alpine", readme_group: "alpine3.18" }
-### 12-3.4-bookworm is generated with the bundle version!
-###        - { version: "12-3.4", variant: "bookworm", postgres: "12", postgis: "3.4", arch: "amd64 arm64", tags: "12-3.4-bookworm 12-3.4.0-bookworm 12-3.4", readme_group: "bookworm" }
+# --skip-- - { version: "12-3.4", variant: "bookworm", postgres: "12", postgis: "3.4", arch: "amd64 arm64", tags: "12-3.4-bookworm 12-3.4.0-bookworm 12-3.4", readme_group: "bookworm" }
            - { version: "12-3.4", variant: "bullseye", postgres: "12", postgis: "3.4", arch: "amd64", tags: "12-3.4-bullseye 12-3.4.0-bullseye", readme_group: "bullseye" }
            - { version: "12-3.4-bundle", variant: "bookworm", postgres: "12", postgis: "3.4", arch: "amd64 arm64", tags: "12-3.4-bundle-bookworm 12-3.4.0-bundle-bookworm 12-3.4-bundle", readme_group: "bundle" }
            - { version: "13-3.4", variant: "alpine3.18", postgres: "13", postgis: "3.4", arch: "amd64", tags: "13-3.4-alpine3.18 13-3.4.0-alpine3.18 13-3.4-alpine", readme_group: "alpine3.18" }
-### 13-3.4-bookworm is generated with the bundle version!
-###        - { version: "13-3.4", variant: "bookworm", postgres: "13", postgis: "3.4", arch: "amd64 arm64", tags: "13-3.4-bookworm 13-3.4.0-bookworm 13-3.4", readme_group: "bookworm" }
+# --skip-- - { version: "13-3.4", variant: "bookworm", postgres: "13", postgis: "3.4", arch: "amd64 arm64", tags: "13-3.4-bookworm 13-3.4.0-bookworm 13-3.4", readme_group: "bookworm" }
            - { version: "13-3.4", variant: "bullseye", postgres: "13", postgis: "3.4", arch: "amd64", tags: "13-3.4-bullseye 13-3.4.0-bullseye", readme_group: "bullseye" }
            - { version: "13-3.4-bundle", variant: "bookworm", postgres: "13", postgis: "3.4", arch: "amd64 arm64", tags: "13-3.4-bundle-bookworm 13-3.4.0-bundle-bookworm 13-3.4-bundle", readme_group: "bundle" }
            - { version: "14-3.4", variant: "alpine3.18", postgres: "14", postgis: "3.4", arch: "amd64", tags: "14-3.4-alpine3.18 14-3.4.0-alpine3.18 14-3.4-alpine", readme_group: "alpine3.18" }
-### 14-3.4-bookworm is generated with the bundle version!
-###        - { version: "14-3.4", variant: "bookworm", postgres: "14", postgis: "3.4", arch: "amd64 arm64", tags: "14-3.4-bookworm 14-3.4.0-bookworm 14-3.4", readme_group: "bookworm" }
+# --skip-- - { version: "14-3.4", variant: "bookworm", postgres: "14", postgis: "3.4", arch: "amd64 arm64", tags: "14-3.4-bookworm 14-3.4.0-bookworm 14-3.4", readme_group: "bookworm" }
            - { version: "14-3.4", variant: "bullseye", postgres: "14", postgis: "3.4", arch: "amd64", tags: "14-3.4-bullseye 14-3.4.0-bullseye", readme_group: "bullseye" }
            - { version: "14-3.4-bundle", variant: "bookworm", postgres: "14", postgis: "3.4", arch: "amd64 arm64", tags: "14-3.4-bundle-bookworm 14-3.4.0-bundle-bookworm 14-3.4-bundle", readme_group: "bundle" }
            - { version: "14-master", variant: "bookworm", postgres: "14", postgis: "master", arch: "amd64", tags: "14-master-bookworm 14-master", readme_group: "test" }
            - { version: "15-3.4", variant: "alpine3.18", postgres: "15", postgis: "3.4", arch: "amd64", tags: "15-3.4-alpine3.18 15-3.4.0-alpine3.18 15-3.4-alpine alpine", readme_group: "alpine3.18" }
-### 15-3.4-bookworm is generated with the bundle version!
-###        - { version: "15-3.4", variant: "bookworm", postgres: "15", postgis: "3.4", arch: "amd64 arm64", tags: "15-3.4-bookworm 15-3.4.0-bookworm 15-3.4 latest", readme_group: "bookworm" }
+# --skip-- - { version: "15-3.4", variant: "bookworm", postgres: "15", postgis: "3.4", arch: "amd64 arm64", tags: "15-3.4-bookworm 15-3.4.0-bookworm 15-3.4 latest", readme_group: "bookworm" }
            - { version: "15-3.4", variant: "bullseye", postgres: "15", postgis: "3.4", arch: "amd64", tags: "15-3.4-bullseye 15-3.4.0-bullseye", readme_group: "bullseye" }
            - { version: "15-3.4-bundle", variant: "bookworm", postgres: "15", postgis: "3.4", arch: "amd64 arm64", tags: "15-3.4-bundle-bookworm 15-3.4.0-bundle-bookworm 15-3.4-bundle bundle", readme_group: "bundle" }
            - { version: "15-master", variant: "bookworm", postgres: "15", postgis: "master", arch: "amd64", tags: "15-master-bookworm 15-master", readme_group: "test" }
@@ -50,10 +50,30 @@ jobs:
     name: "${{ matrix.version }}-${{ matrix.variant }} docker image"
     runs-on: ubuntu-22.04
     continue-on-error: ${{ matrix.postgis == 'master' }}
+#    env:
+#      REGISTRY: "docker.io"
+#      REPO_NAME: "ImreSamu"
+#      IMAGE_NAME: "postgis"
 
     steps:
     - name: Checkout source
       uses: actions/checkout@v3
+
+    - name: Load Environment Variables from the .env file
+      run: |
+        set -a
+        source .env
+        set +a
+        echo " "
+        if [ -z "$REGISTRY" ] || [ -z "$REPO_NAME" ] || [ -z "$IMAGE_NAME" ]; then
+          echo "Error: REGISTRY,REPO_NAME and IMAGE_NAME must be set" >&2
+          exit 1
+        else
+          echo " ----  .env file loaded ----"
+          echo " - REGISTRY: $REGISTRY"
+          echo " - REPO_NAME: $REPO_NAME"
+          echo " - IMAGE_NAME: $IMAGE_NAME"
+        fi
 
     - name: "make test-${{ matrix.version }}-${{ matrix.variant }} tags ${{ matrix.tags }}"
       run: make test-${{ matrix.version }}-${{ matrix.variant }}

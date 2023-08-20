@@ -4,16 +4,36 @@ version: 2.1
 # Circle CI arm64 builder
 
 jobs:
-  build_arm64:
+  arm64:
     machine:
       image: ubuntu-2204:current
     resource_class: arm.medium
     parameters:
       target-version-variant:
         type: string
+#   environment:
+#     REGISTRY: "docker.io"
+#     REPO_NAME: "ImreSamu"
+#     IMAGE_NAME: "postgis"
     steps:
       - checkout
       - run: uname -a
+      - run:
+          name: Load Environment Variables from the .env file
+          command: |
+            set -a
+            source .env
+            set +a
+            echo " "
+            if [ -z "$REGISTRY" ] || [ -z "$REPO_NAME" ] || [ -z "$IMAGE_NAME" ]; then
+              echo "Error: REGISTRY,REPO_NAME and IMAGE_NAME must be set" >&2
+              exit 1
+            else
+              echo " ----  .env file loaded ----"
+              echo " - REGISTRY: $REGISTRY"
+              echo " - REPO_NAME: $REPO_NAME"
+              echo " - IMAGE_NAME: $IMAGE_NAME"            
+            fi            
       - run: docker --version
       - run: docker info
       - run: make test-<< parameters.target-version-variant >>
@@ -26,25 +46,20 @@ workflows:
           matrix:
             parameters:
               target-version-variant: [
+#
+#  These "--skip--" images serve as inputs for the bundle images,
+#       hence they must be generated within the same JOB.
+#
 #circleci-targets-start
-                "11-3.3-alpine3.18",
                 "11-3.3-bookworm",
-                "12-3.4-alpine3.18",
 #   --skip--    "12-3.4-bookworm",  -->  generated with the related bundle job!
                 "12-3.4-bundle-bookworm",
-                "13-3.4-alpine3.18",
 #   --skip--    "13-3.4-bookworm",  -->  generated with the related bundle job!
                 "13-3.4-bundle-bookworm",
-                "14-3.4-alpine3.18",
 #   --skip--    "14-3.4-bookworm",  -->  generated with the related bundle job!
                 "14-3.4-bundle-bookworm",
-                "14-master-bookworm",
-                "15-3.4-alpine3.18",
 #   --skip--    "15-3.4-bookworm",  -->  generated with the related bundle job!
                 "15-3.4-bundle-bookworm",
-                "15-master-bookworm",
-                "16-3.4-alpine3.18",
                 "16-3.4-bookworm",
-                "16-master-bookworm",
 #circleci-targets-end
               ]

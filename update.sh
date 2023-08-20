@@ -8,6 +8,21 @@ set -Eeuo pipefail
 
 cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
+# Load .env files config.
+set -a
+source .env
+set +a
+echo " "
+if [ -z "$REGISTRY" ] || [ -z "$REPO_NAME" ] || [ -z "$IMAGE_NAME" ]; then
+    echo "Error: REGISTRY,REPO_NAME and IMAGE_NAME must be set" >&2
+    exit 1
+else
+    echo " ----  .env file loaded ----"
+    echo " - REGISTRY: $REGISTRY"
+    echo " - REPO_NAME: $REPO_NAME"
+    echo " - IMAGE_NAME: $IMAGE_NAME"
+fi
+
 # Verify that the required command-line tools (jq, gawk, python3) are available in the system's PATH.
 # Exit with an error message if any of them are missing.
 for cmd in jq gawk curl python3 docker; do

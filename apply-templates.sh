@@ -6,6 +6,10 @@ set -Eeuo pipefail
 #   - Copyright: (c) Docker PostgreSQL Authors
 #   - MIT License, https://github.com/docker-library/postgres/blob/master/LICENSE
 
+export REGISTRY="${REGISTRY:-docker.io}"
+export REPO_NAME="${REPO_NAME:-postgis}"
+export IMAGE_NAME="${IMAGE_NAME:-postgis}"
+
 # Check dependencies
 [ -f ./versions.json ]
 for cmd in jq gawk curl; do

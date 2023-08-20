@@ -46,8 +46,7 @@ for version in $versions; do
 
         if [[ $arch == *"amd64"* ]]; then
             if [[ $versions_bundle_base =~ ${version}-${variant} ]]; then
-                echo "### ${version}-${variant} is generated with the bundle version!" >>_matrix.yml
-                echo "###        - { version: \"$version\", variant: \"$variant\", postgres: \"$pg_docker\", postgis: \"$postgis\", arch: \"$arch\", tags: \"$tags\", readme_group: \"$readme_group\" }" >>_matrix.yml
+                echo "# --skip-- - { version: \"$version\", variant: \"$variant\", postgres: \"$pg_docker\", postgis: \"$postgis\", arch: \"$arch\", tags: \"$tags\", readme_group: \"$readme_group\" }" >>_matrix.yml
             else
                 echo "           - { version: \"$version\", variant: \"$variant\", postgres: \"$pg_docker\", postgis: \"$postgis\", arch: \"$arch\", tags: \"$tags\", readme_group: \"$readme_group\" }" >>_matrix.yml
             fi

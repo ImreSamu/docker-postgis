@@ -6,9 +6,8 @@
 
 # set the base image
 ARG REGISTRY=docker.io
-ARG REPO_NAME=postgis
+ARG REPO_NAME=imresamu
 ARG IMAGE_NAME=postgis
-
 
 FROM ${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}:12-3.4-bookworm AS builder
 
