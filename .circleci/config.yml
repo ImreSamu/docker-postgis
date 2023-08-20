@@ -64,13 +64,13 @@ jobs:
 
 workflows:
   build-deploy:
-    triggers:
-      - schedule:
-          cron: "15 5 * * 1"
-          filters:
-            branches:
-              only:
-                - master
+#    triggers:
+#      - schedule:
+#          cron: "15 5 * * 1"
+#          filters:
+#            branches:
+#              only:
+#                - master
     jobs:
       - build-arm64:
           matrix:
