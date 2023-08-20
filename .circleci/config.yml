@@ -37,8 +37,8 @@ jobs:
       - docker/check:
           registry: docker.io
           repo: $REPO_NAME
-          docker-username: $DOCKERHUB_USERNAME
-          docker-password: $DOCKERHUB_ACCESS_TOKEN
+          docker-username: DOCKERHUB_USERNAME
+          docker-password: DOCKERHUB_ACCESS_TOKEN
       - run: make test-<< parameters.target-version-variant >>
       - run: docker images
       - run:
@@ -53,7 +53,7 @@ jobs:
 
 
       - run:
-          name: "Push docker image : make push-<< parameters.target-version-variant >>" 
+          name: "Push docker image : make push-<< parameters.target-version-variant >>"
           command: |
             if [ "$CIRCLE_BRANCH" == "master" ] && [ -z "$CIRCLE_PULL_REQUEST" ]; then
               make push-<< parameters.target-version-variant >>
