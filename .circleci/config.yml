@@ -36,7 +36,6 @@ jobs:
       - run: docker info
       - docker/check:
           registry: docker.io
-          repo: $REPO_NAME
           docker-username: DOCKERHUB_USERNAME
           docker-password: DOCKERHUB_ACCESS_TOKEN
       - run: make test-<< parameters.target-version-variant >>
