@@ -34,30 +34,53 @@ jobs:
       - run: docker info
       - run: make test-<< parameters.target-version-variant >>
       - run: docker images
+      - run:
+          name: Conditional Docker Check - Halt if not on master branch or if it's a PR
+          command: |
+            # Check if the current branch is NOT 'master' or if the build is triggered by a pull request.
+            # If either of these conditions is met, halt the workflow.
+            if [ "$CIRCLE_BRANCH" != "master" ] || [ -n "$CIRCLE_PULL_REQUEST" ]; then
+              circleci-agent step halt
+            fi
+
+      - docker/check:
+          registry: docker.io
+          repo: $REPO_NAME
+          docker-username: $DOCKERHUB_USERNAME
+          docker-password: $DOCKERHUB_ACCESS_TOKEN
+
+      - run:
+          name: Push docker image
+          command: |
+            if [ "$CIRCLE_BRANCH" == "master" ] && [ -z "$CIRCLE_PULL_REQUEST" ]; then
+              make push-<< parameters.version >>-<< parameters.variant >>
+            fi
+#         environment:
+#           DOCKERHUB_USERNAME: $DOCKERHUB_USERNAME
+#           DOCKERHUB_ACCESS_TOKEN: $DOCKERHUB_ACCESS_TOKEN
+
 
 workflows:
   build-deploy:
+    triggers:
+      - schedule:
+          cron: "15 5 * * 1"
+          filters:
+            branches:
+              only:
+                - master
     jobs:
       - build-arm64:
           matrix:
             parameters:
               target-version-variant: [
 #
-# They are created using the ./apply-ci.sh script based on the version.json file, 
+# They are created using the ./apply-ci.sh script based on the version.json file,
 #      where the architecture is defined as "arm64".
 # These "--skip--" images serve as inputs for the "*-bundle" images,
 #       hence they must be generated within the bundle JOB.
 #
 #circleci-targets-start
-                "11-3.3-bookworm",
-#   --skip--    "12-3.4-bookworm",  -->  generated with the related bundle job!
-                "12-3.4-bundle-bookworm",
-#   --skip--    "13-3.4-bookworm",  -->  generated with the related bundle job!
-                "13-3.4-bundle-bookworm",
-#   --skip--    "14-3.4-bookworm",  -->  generated with the related bundle job!
-                "14-3.4-bundle-bookworm",
-#   --skip--    "15-3.4-bookworm",  -->  generated with the related bundle job!
-                "15-3.4-bundle-bookworm",
-                "16-3.4-bookworm",
+                "15-3.4-bookworm",
 #circleci-targets-end
               ]
