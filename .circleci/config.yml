@@ -50,10 +50,10 @@ jobs:
           docker-password: $DOCKERHUB_ACCESS_TOKEN
 
       - run:
-          name: Push docker image
+          name: "Push docker image : make push-<< parameters.target-version-variant >>" 
           command: |
             if [ "$CIRCLE_BRANCH" == "master" ] && [ -z "$CIRCLE_PULL_REQUEST" ]; then
-              make push-<< parameters.version >>-<< parameters.variant >>
+              make push-<< parameters.target-version-variant >>
             fi
 #         environment:
 #           DOCKERHUB_USERNAME: $DOCKERHUB_USERNAME
