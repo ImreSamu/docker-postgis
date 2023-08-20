@@ -57,8 +57,8 @@ function version_reverse_sort() {
 function fetch_postgres_docker_versions() {
 
     echo " "
-    echo " Fech available postgres docker versions from the docker hub"
-    
+    echo "Fetching available PostgreSQL Docker image versions from Docker Hub. ( https://registry.hub.docker.com )"
+
     local PAGE_SIZE=100
     local page=1
     postgres_all_docker_versions=""

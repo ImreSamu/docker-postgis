@@ -10,8 +10,15 @@ cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # Load .env files config.
 set -a
-source .env
+if [[ "${TEST:-}" == "true" ]]; then
+  # shellcheck disable=SC1091
+  source .env.test
+else
+  # shellcheck disable=SC1091
+  source .env
+fi
 set +a
+
 echo " "
 if [ -z "$REGISTRY" ] || [ -z "$REPO_NAME" ] || [ -z "$IMAGE_NAME" ]; then
     echo "Error: REGISTRY,REPO_NAME and IMAGE_NAME must be set" >&2
@@ -21,6 +28,7 @@ else
     echo " - REGISTRY: $REGISTRY"
     echo " - REPO_NAME: $REPO_NAME"
     echo " - IMAGE_NAME: $IMAGE_NAME"
+    echo " "
 fi
 
 # Verify that the required command-line tools (jq, gawk, python3) are available in the system's PATH.
@@ -45,8 +53,8 @@ fi
 # apply version.json - generate Dockerfiles
 ./apply-templates.sh "$@"
 
-# apply version.json - generate .github/workflows/main.yml
-./apply-githubci.sh "$@"
+# apply version.json - generate .github/workflows/main.yml and .circleci/config.yml
+./apply-ci.sh "$@"
 
 # apply version.json - generate README.md
 ./apply-readme.sh "$@"

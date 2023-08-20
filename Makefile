@@ -4,7 +4,11 @@
 #    docker run -d -p 5000:5000 --restart=always --name registry registry:2
 #    with REGISTRY ?= localhost:5000
 
--include .env
+ENVFILE = .env
+ifeq ($(TEST),true)
+  ENVFILE = .env.test
+endif
+-include $(ENVFILE)
 export
 
 REGISTRY ?= docker.io
@@ -141,6 +145,10 @@ check-gh-rate:
 	@echo 'Checking github ratelimit ...'
 	@curl -sI https://api.github.com/users/octocat | grep x-ratelimit
 
+# Rule to run shellcheck on all .sh files in the current directory, subdirectories, and sub-subdirectories.
+lint:
+	shellcheck *.sh ./*/*.sh ./*/*/*.sh
+
 # Help target
 help: check_variant
 	@echo ' Available make targets:'
@@ -159,6 +167,7 @@ help: check_variant
 	@echo ' '
 	@echo 'all          : Local run: "update" "build" "test" (without push)'
 	@echo 'check-gh-rate: Check the github ratelimit'
+	@echo 'lint         : Run shellcheck on all .sh files'
 	@echo 'help         : This help file'
 	@echo 'push-readme  : Push README.md to Dockerhub'
 	@echo 'test-prepare : Clone official-images repository'
@@ -167,7 +176,7 @@ help: check_variant
 	@echo 'You can check the the commands without executing: make -n <target> '
 	@echo ' '
 
-.PHONY: build all update test-prepare test push push-readme check-gh-rate help \
+.PHONY: build all update test-prepare test push push-readme check-gh-rate lint help \
 	$(foreach version,$(VERSIONS),' build-$(version)') \
 	$(foreach dir,$(DOCKERFILE_DIRS),' build-$(word 1,$(subst /, ,$(dir)))-$(word 2,$(subst /, ,$(dir)))') \
 	$(foreach version,$(VERSIONS),' test-$(version)') \

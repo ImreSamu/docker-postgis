@@ -4,17 +4,13 @@ version: 2.1
 # Circle CI arm64 builder
 
 jobs:
-  arm64:
+  build-arm64:
     machine:
       image: ubuntu-2204:current
     resource_class: arm.medium
     parameters:
       target-version-variant:
         type: string
-#   environment:
-#     REGISTRY: "docker.io"
-#     REPO_NAME: "ImreSamu"
-#     IMAGE_NAME: "postgis"
     steps:
       - checkout
       - run: uname -a
@@ -32,8 +28,8 @@ jobs:
               echo " ----  .env file loaded ----"
               echo " - REGISTRY: $REGISTRY"
               echo " - REPO_NAME: $REPO_NAME"
-              echo " - IMAGE_NAME: $IMAGE_NAME"            
-            fi            
+              echo " - IMAGE_NAME: $IMAGE_NAME"
+            fi
       - run: docker --version
       - run: docker info
       - run: make test-<< parameters.target-version-variant >>
@@ -42,13 +38,15 @@ jobs:
 workflows:
   build-deploy:
     jobs:
-      - build_arm64:
+      - build-arm64:
           matrix:
             parameters:
               target-version-variant: [
 #
-#  These "--skip--" images serve as inputs for the bundle images,
-#       hence they must be generated within the same JOB.
+# They are created using the ./apply-ci.sh script based on the version.json file, 
+#      where the architecture is defined as "arm64".
+# These "--skip--" images serve as inputs for the "*-bundle" images,
+#       hence they must be generated within the bundle JOB.
 #
 #circleci-targets-start
                 "11-3.3-bookworm",

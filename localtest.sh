@@ -20,16 +20,21 @@ else
     echo "Container with name: $testregistry is already running"
 fi
 
+# Enable TEST mode and use the local registry at localhost:5000 (as specified in the .env.test file).
+export TEST=true
+set -a
+# shellcheck disable=SC1091
+source .env.test
+set +a
 
+echo " "
+echo "Test mode = $TEST ; Reading from the .env.test file !"
+echo " ------- .env.test -------- "
+cat .env.test
+echo " -------------------------- "
 
-#export dockerhublink="${dockerhublink:-https://registry.hub.docker.com/r/postgis/postgis/tags?page=1&name=}"
-#export githubrepolink="${githubrepolink:-https://github.com/postgis/docker-postgis/blob/master}"
-
-export REGISTRY="localhost:5000"
-export REPO_NAME="testrepo"
-export IMAGE_NAME="testpostgisimage"
-
-# generate versions.json, Dockerfiles, README.md, .github/workflows/main.yml
+# generate,update
+#     versions.json, Dockerfiles, README.md, .github/workflows/main.yml .circleci/config.yml
 ./update.sh
 
 # check commands
@@ -47,8 +52,8 @@ docker images | grep "${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}"
 # check registy
 echo " "
 echo " ---- Registry info ---- "
-curl --location --silent --request GET 'http://localhost:5000/v2/_catalog?page=1' | jq '.'
-curl --location --silent --request GET 'http://localhost:5000/v2/${REPO_NAME}/${IMAGE_NAME}/tags/list?page=1' | jq '.'
+curl --location --silent --request GET "http://localhost:5000/v2/_catalog?page=1" | jq '.'
+curl --location --silent --request GET "http://localhost:5000/v2/${REPO_NAME}/${IMAGE_NAME}/tags/list?page=1" | jq '.'
 
 echo " "
 echo "WARNING:  Be carefull and not push the .localtest.sh script generated Dockerfiles,"
@@ -56,6 +61,9 @@ echo "          because contains reference to the test REGISTRY, REPO_NAME and I
 echo " "
 echo "done."
 
-#  manual tests:
+#  manual tests cheetsheets:
+#  ----------------------------
 #  REGISTRY=localhost:5000  make push-15-3.4-bundle
 #  REGISTRY=localhost:5000  make push-15-3.4-bundle-bookworm
+#  TEST=true                make push-15-3.4-bundle-bookworm
+#

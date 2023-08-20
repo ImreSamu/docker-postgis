@@ -1,5 +1,7 @@
 name: Docker PostGIS CI
 
+# this is the x86_64/amd64 build generated via github actions
+
 on:
   push:
   pull_request:
@@ -16,8 +18,10 @@ jobs:
       matrix:
         include:
 #
-#  These "--skip--" images serve as inputs for the bundle images,
-#       hence they must be generated within the same JOB.
+# They are created using the ./apply-ci.sh script based on the version.json file,
+#
+# These "--skip--" images serve as inputs for the "*-bundle" images,
+#       hence they must be generated within the bundle JOB.
 #
 #matrix-include-start
            - { version: "11-3.3", variant: "alpine3.18", postgres: "11", postgis: "3.3", arch: "amd64", tags: "11-3.3-alpine3.18 11-3.3.4-alpine3.18 11-3.3-alpine", readme_group: "alpine3.18" }
@@ -50,10 +54,6 @@ jobs:
     name: "${{ matrix.version }}-${{ matrix.variant }} docker image"
     runs-on: ubuntu-22.04
     continue-on-error: ${{ matrix.postgis == 'master' }}
-#    env:
-#      REGISTRY: "docker.io"
-#      REPO_NAME: "ImreSamu"
-#      IMAGE_NAME: "postgis"
 
     steps:
     - name: Checkout source
