@@ -20,18 +20,31 @@ Unless `-e POSTGRES_DB` is passed to the container at startup time, this databas
 
 ## Versions (2023-08-20)
 
-Supported architecture: `amd64` (also known as X86-64)"
+We provide multi-platform image support for the following architectures:
 
-Recommended version for new users: `postgis/postgis:15-3.4`
+- `amd64`: Also known as X86-64. Use `--platform=linux/amd64` when specifying the platform.
+- `arm64`: Also known as AArch64. Use `--platform=linux/arm64` when specifying the platform.
+
+Notes:
+
+- The `arm64` architecture support is still experimental. Please refer to the 'arch' column in the version information to determine whether an `arm64` version is available for a specific release.
+- We currently do not support 32-bit architectures. Our images are only available for 64-bit architectures.
+
+### Recommended Versions for New Users
+
+For those new to PostGIS, we recommend the following image versions:
+
+- `postgis/postgis:15-3.4`: This image includes a minimal setup of PostgreSQL with the PostGIS extension.
+- `postgis/postgis:15-3.4-bundle`: This image includes additional geospatial-related extras along with PostgreSQL and PostGIS.
 
 ### Debian - bookworm  (recommended)
 
-* This Docker-PostGIS version has a cautious release cycle to guarantee high stability.
-  * By "cautious", we mean it does not always have the latest versions of geos, proj, gdal, and sfcgal packages.
-* We use PostGIS, geos, proj, gdal, and sfcgal packages from the Debian repository.
-  * In the Debian Bullseye repository, the versions are: geos=3.9, gdal=3.2, proj=7.2, and sfcgal=1.3.9.
-* This version is easy to extend and has matured over time.
-* PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
+- This Docker-PostGIS version has a cautious release cycle to guarantee high stability.
+  - By "cautious", we mean it does not always have the latest versions of geos, proj, gdal, and sfcgal packages.
+- We use PostGIS, geos, proj, gdal, and sfcgal packages from the Debian repository.
+  - In the Debian Bullseye repository, the versions are: geos=3.9, gdal=3.2, proj=7.2, and sfcgal=1.3.9.
+- This version is easy to extend and has matured over time.
+- PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
 <!-- bookworm_begin  -->
 | `imresamu/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
@@ -45,10 +58,10 @@ Recommended version for new users: `postgis/postgis:15-3.4`
 
 ### Debian - bullseye
 
-* We use PostGIS, geos, proj, gdal, and sfcgal packages from the Debian repository.
-  * In the Debian Bullseye repository, the versions are: geos=3.9, gdal=3.2, proj=7.2, and sfcgal=1.3.9.
-* This version is easy to extend and has matured over time.
-* PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
+- We use PostGIS, geos, proj, gdal, and sfcgal packages from the Debian repository.
+  - In the Debian Bullseye repository, the versions are: geos=3.9, gdal=3.2, proj=7.2, and sfcgal=1.3.9.
+- This version is easy to extend and has matured over time.
+- PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
 <!-- bullseye_begin  -->
 | `imresamu/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
@@ -77,10 +90,10 @@ Please note that the included package list is subject to change as we continue t
 
 ### Alpine based
 
-* The base operating system is [Alpine Linux](https://alpinelinux.org/). It is designed to be small, simple, and secure, and it's based on [musl libc](https://musl.libc.org/).
-* In the Alpine 3.18 version, the package versions are: geos=3.11, gdal=3.6, proj=9.2, and sfcgal=1.4.
-* PostGIS is compiled from source, making it a bit more challenging to extend.
-* PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
+- The base operating system is [Alpine Linux](https://alpinelinux.org/). It is designed to be small, simple, and secure, and it's based on [musl libc](https://musl.libc.org/).
+- In the Alpine 3.18 version, the package versions are: geos=3.11, gdal=3.6, proj=9.2, and sfcgal=1.4.
+- PostGIS is compiled from source, making it a bit more challenging to extend.
+- PostgreSQL 11 is not compatible with PostGIS 3.4, so it remains on PostGIS 3.3. Please note that after November 9, 2023, PostgreSQL 11 will reach its [end-of-life (EOL)](https://www.postgresql.org/support/versioning/) and will no longer receive support.
 
 <!-- alpine3.18_begin  -->
 | `imresamu/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
@@ -94,9 +107,9 @@ Please note that the included package list is subject to change as we continue t
 
 ### Test images
 
-* We provide alpha, beta, release candidate (rc), and development (identified as ~master) versions.
-* The template for the `*-master` images is updated manually, which might lead to a delay of a few weeks sometimes.
-* The ~master SFCGAL version is 1.4 or higher. The cgal version is locked on the [5.6.x-branch](https://github.com/CGAL/cgal/tree/5.6.x-branch).
+- We provide alpha, beta, release candidate (rc), and development (identified as ~master) versions.
+- The template for the `*-master` images is updated manually, which might lead to a delay of a few weeks sometimes.
+- The ~master SFCGAL version is 1.4 or higher. The cgal version is locked on the [5.6.x-branch](https://github.com/CGAL/cgal/tree/5.6.x-branch).
 
 <!-- test_begin  -->
 | `imresamu/postgis:` tags | Dockerfile | Arch | OS | Postgres | PostGIS |
@@ -139,13 +152,13 @@ See [the PostGIS documentation](http://postgis.net/docs/postgis_installation.htm
 
 Since the docker-postgis repository is an extension of the official Docker PostgreSQL repository, all environment variables supported there are also supported here:
 
-* `POSTGRES_PASSWORD`
-* `POSTGRES_USER`
-* `POSTGRES_DB`
-* `POSTGRES_INITDB_ARGS`
-* `POSTGRES_INITDB_WALDIR`
-* `POSTGRES_HOST_AUTH_METHOD`
-* `PGDATA`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_USER`
+- `POSTGRES_DB`
+- `POSTGRES_INITDB_ARGS`
+- `POSTGRES_INITDB_WALDIR`
+- `POSTGRES_HOST_AUTH_METHOD`
+- `PGDATA`
 
 Read more:  https://github.com/docker-library/docs/blob/master/postgres/README.md
 
@@ -158,31 +171,33 @@ It's important to note that the environment variables for the Docker image are d
 
 Troubleshooting can often be challenging. It's important to know that the docker-postgis repository is an extension of the official Docker PostgreSQL repository. Therefore, if you encounter any issues, it's worth testing whether the problem can be reproduced with the [official PostgreSQL Docker images](https://hub.docker.com/_/postgres). If so, it's recommended to search for solutions based on this. The following websites are suggested:
 
-* Upstream docker postgres repo: https://github.com/docker-library/postgres
-  * search for the open or closed issues !
-* Docker Community Forums: https://forums.docker.com
-* Docker Community Slack: https://dockr.ly/slack
-* Stack Overflow: https://stackoverflow.com/questions/tagged/docker+postgresql
+- Upstream docker postgres repo: https://github.com/docker-library/postgres
+  - search for the open or closed issues !
+- Docker Community Forums: https://forums.docker.com
+- Docker Community Slack: https://dockr.ly/slack
+- Stack Overflow: https://stackoverflow.com/questions/tagged/docker+postgresql
 
 If your problem is Postgis related:
 
-* Stack Overflow : docker + postgis https://stackoverflow.com/questions/tagged/docker+postgis
-* Postgis issue tracker: https://trac.osgeo.org/postgis/report
+- Stack Overflow : docker + postgis https://stackoverflow.com/questions/tagged/docker+postgis
+- Postgis issue tracker: https://trac.osgeo.org/postgis/report
 
 And if you don't have a postgres docker experience - read this blog post:
 
-* https://www.docker.com/blog/how-to-use-the-postgres-docker-official-image/
+- https://www.docker.com/blog/how-to-use-the-postgres-docker-official-image/
 
 
 ## Security
 
 It's crucial to be aware that in a cloud environment, with default settings, these images are vulnerable, and there's a high risk of cryptominer infection if the ports are left open. ( [Read More](https://github.com/docker-library/postgres/issues/770#issuecomment-704460980) )
-* Note that ports which are not bound to the host (i.e., `-p 5432:5432` instead of `-p 127.0.0.1:5432:5432`) will be accessible from the outside. This also applies if you configured UFW to block this specific port, as Docker manages its own iptables rules. ( [Read More](https://docs.docker.com/network/iptables/) )
+
+- Note that ports which are not bound to the host (i.e., `-p 5432:5432` instead of `-p 127.0.0.1:5432:5432`) will be accessible from the outside. This also applies if you configured UFW to block this specific port, as Docker manages its own iptables rules. ( [Read More](https://docs.docker.com/network/iptables/) )
 
 Recomendations:
-* You can add options for using SSL ( [see postgres example](https://github.com/docker-library/postgres/issues/989#issuecomment-1222648067) )
+
+- You can add options for using SSL ( [see postgres example](https://github.com/docker-library/postgres/issues/989#issuecomment-1222648067) )
   - `-c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key`
-* Or you can use [SSH Tunnels](https://www.postgresql.org/docs/15/ssh-tunnels.html) with `-p 127.0.0.1:5432:5432`
+- Or you can use [SSH Tunnels](https://www.postgresql.org/docs/15/ssh-tunnels.html) with `-p 127.0.0.1:5432:5432`
 
 ## Known Issues / Errors
 
