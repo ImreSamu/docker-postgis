@@ -102,25 +102,37 @@ manifest-tool push from-args \
 
 # ----- 12-3.5-alpine3.19 -----
 
-echo "manifest: ${dockername}:12-3.5.0rc1-alpine3.19"
+echo "manifest: ${dockername}:12-3.5-alpine3.19"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:12-3.5.0rc1-alpine3.19 \
-    --target ${dockername}:12-3.5.0rc1-alpine3.19 || true
+    --template ${dockername}-ARCHVARIANT:12-3.5-alpine3.19 \
+    --target ${dockername}:12-3.5-alpine3.19 || true
+
+echo "manifest: ${dockername}:12-3.5.0-alpine3.19"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:12-3.5.0-alpine3.19 \
+    --target ${dockername}:12-3.5.0-alpine3.19 || true
 
 # ----- 12-3.5-alpine3.20 -----
 
-echo "manifest: ${dockername}:12-3.5.0rc1-alpine3.20"
+echo "manifest: ${dockername}:12-3.5-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:12-3.5.0rc1-alpine3.20 \
-    --target ${dockername}:12-3.5.0rc1-alpine3.20 || true
+    --template ${dockername}-ARCHVARIANT:12-3.5-alpine3.20 \
+    --target ${dockername}:12-3.5-alpine3.20 || true
 
-echo "manifest: ${dockername}:12-3.5.0rc1-alpine"
+echo "manifest: ${dockername}:12-3.5.0-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:12-3.5.0rc1-alpine \
-    --target ${dockername}:12-3.5.0rc1-alpine || true
+    --template ${dockername}-ARCHVARIANT:12-3.5.0-alpine3.20 \
+    --target ${dockername}:12-3.5.0-alpine3.20 || true
+
+echo "manifest: ${dockername}:12-3.5-alpine"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:12-3.5-alpine \
+    --target ${dockername}:12-3.5-alpine || true
 
 # ----- 13-3.3-alpine3.20 -----
 
@@ -212,25 +224,37 @@ manifest-tool push from-args \
 
 # ----- 13-3.5-alpine3.19 -----
 
-echo "manifest: ${dockername}:13-3.5.0rc1-alpine3.19"
+echo "manifest: ${dockername}:13-3.5-alpine3.19"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:13-3.5.0rc1-alpine3.19 \
-    --target ${dockername}:13-3.5.0rc1-alpine3.19 || true
+    --template ${dockername}-ARCHVARIANT:13-3.5-alpine3.19 \
+    --target ${dockername}:13-3.5-alpine3.19 || true
+
+echo "manifest: ${dockername}:13-3.5.0-alpine3.19"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:13-3.5.0-alpine3.19 \
+    --target ${dockername}:13-3.5.0-alpine3.19 || true
 
 # ----- 13-3.5-alpine3.20 -----
 
-echo "manifest: ${dockername}:13-3.5.0rc1-alpine3.20"
+echo "manifest: ${dockername}:13-3.5-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:13-3.5.0rc1-alpine3.20 \
-    --target ${dockername}:13-3.5.0rc1-alpine3.20 || true
+    --template ${dockername}-ARCHVARIANT:13-3.5-alpine3.20 \
+    --target ${dockername}:13-3.5-alpine3.20 || true
 
-echo "manifest: ${dockername}:13-3.5.0rc1-alpine"
+echo "manifest: ${dockername}:13-3.5.0-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:13-3.5.0rc1-alpine \
-    --target ${dockername}:13-3.5.0rc1-alpine || true
+    --template ${dockername}-ARCHVARIANT:13-3.5.0-alpine3.20 \
+    --target ${dockername}:13-3.5.0-alpine3.20 || true
+
+echo "manifest: ${dockername}:13-3.5-alpine"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:13-3.5-alpine \
+    --target ${dockername}:13-3.5-alpine || true
 
 # ----- 14-3.3-alpine3.20 -----
 
@@ -322,25 +346,37 @@ manifest-tool push from-args \
 
 # ----- 14-3.5-alpine3.19 -----
 
-echo "manifest: ${dockername}:14-3.5.0rc1-alpine3.19"
+echo "manifest: ${dockername}:14-3.5-alpine3.19"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:14-3.5.0rc1-alpine3.19 \
-    --target ${dockername}:14-3.5.0rc1-alpine3.19 || true
+    --template ${dockername}-ARCHVARIANT:14-3.5-alpine3.19 \
+    --target ${dockername}:14-3.5-alpine3.19 || true
+
+echo "manifest: ${dockername}:14-3.5.0-alpine3.19"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:14-3.5.0-alpine3.19 \
+    --target ${dockername}:14-3.5.0-alpine3.19 || true
 
 # ----- 14-3.5-alpine3.20 -----
 
-echo "manifest: ${dockername}:14-3.5.0rc1-alpine3.20"
+echo "manifest: ${dockername}:14-3.5-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:14-3.5.0rc1-alpine3.20 \
-    --target ${dockername}:14-3.5.0rc1-alpine3.20 || true
+    --template ${dockername}-ARCHVARIANT:14-3.5-alpine3.20 \
+    --target ${dockername}:14-3.5-alpine3.20 || true
 
-echo "manifest: ${dockername}:14-3.5.0rc1-alpine"
+echo "manifest: ${dockername}:14-3.5.0-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:14-3.5.0rc1-alpine \
-    --target ${dockername}:14-3.5.0rc1-alpine || true
+    --template ${dockername}-ARCHVARIANT:14-3.5.0-alpine3.20 \
+    --target ${dockername}:14-3.5.0-alpine3.20 || true
+
+echo "manifest: ${dockername}:14-3.5-alpine"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:14-3.5-alpine \
+    --target ${dockername}:14-3.5-alpine || true
 
 # ----- 14-l3.1.9gcp-bookworm -----
 
@@ -466,25 +502,37 @@ manifest-tool push from-args \
 
 # ----- 15-3.5-alpine3.19 -----
 
-echo "manifest: ${dockername}:15-3.5.0rc1-alpine3.19"
+echo "manifest: ${dockername}:15-3.5-alpine3.19"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:15-3.5.0rc1-alpine3.19 \
-    --target ${dockername}:15-3.5.0rc1-alpine3.19 || true
+    --template ${dockername}-ARCHVARIANT:15-3.5-alpine3.19 \
+    --target ${dockername}:15-3.5-alpine3.19 || true
+
+echo "manifest: ${dockername}:15-3.5.0-alpine3.19"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:15-3.5.0-alpine3.19 \
+    --target ${dockername}:15-3.5.0-alpine3.19 || true
 
 # ----- 15-3.5-alpine3.20 -----
 
-echo "manifest: ${dockername}:15-3.5.0rc1-alpine3.20"
+echo "manifest: ${dockername}:15-3.5-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:15-3.5.0rc1-alpine3.20 \
-    --target ${dockername}:15-3.5.0rc1-alpine3.20 || true
+    --template ${dockername}-ARCHVARIANT:15-3.5-alpine3.20 \
+    --target ${dockername}:15-3.5-alpine3.20 || true
 
-echo "manifest: ${dockername}:15-3.5.0rc1-alpine"
+echo "manifest: ${dockername}:15-3.5.0-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:15-3.5.0rc1-alpine \
-    --target ${dockername}:15-3.5.0rc1-alpine || true
+    --template ${dockername}-ARCHVARIANT:15-3.5.0-alpine3.20 \
+    --target ${dockername}:15-3.5.0-alpine3.20 || true
+
+echo "manifest: ${dockername}:15-3.5-alpine"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:15-3.5-alpine \
+    --target ${dockername}:15-3.5-alpine || true
 
 # ----- 15-master-bookworm -----
 
@@ -508,17 +556,17 @@ manifest-tool push from-args \
     --template ${dockername}-ARCHVARIANT:15-recent-bookworm \
     --target ${dockername}:15-recent-bookworm || true
 
-echo "manifest: ${dockername}:15-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm"
+echo "manifest: ${dockername}:15-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:15-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm \
-    --target ${dockername}:15-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm || true
+    --template ${dockername}-ARCHVARIANT:15-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm \
+    --target ${dockername}:15-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm || true
 
-echo "manifest: ${dockername}:15-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm"
+echo "manifest: ${dockername}:15-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:15-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm \
-    --target ${dockername}:15-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm || true
+    --template ${dockername}-ARCHVARIANT:15-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm \
+    --target ${dockername}:15-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm || true
 
 echo "manifest: ${dockername}:15-recent"
 manifest-tool push from-args \
@@ -654,25 +702,37 @@ manifest-tool push from-args \
 
 # ----- 16-3.5-alpine3.19 -----
 
-echo "manifest: ${dockername}:16-3.5.0rc1-alpine3.19"
+echo "manifest: ${dockername}:16-3.5-alpine3.19"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:16-3.5.0rc1-alpine3.19 \
-    --target ${dockername}:16-3.5.0rc1-alpine3.19 || true
+    --template ${dockername}-ARCHVARIANT:16-3.5-alpine3.19 \
+    --target ${dockername}:16-3.5-alpine3.19 || true
+
+echo "manifest: ${dockername}:16-3.5.0-alpine3.19"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:16-3.5.0-alpine3.19 \
+    --target ${dockername}:16-3.5.0-alpine3.19 || true
 
 # ----- 16-3.5-alpine3.20 -----
 
-echo "manifest: ${dockername}:16-3.5.0rc1-alpine3.20"
+echo "manifest: ${dockername}:16-3.5-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:16-3.5.0rc1-alpine3.20 \
-    --target ${dockername}:16-3.5.0rc1-alpine3.20 || true
+    --template ${dockername}-ARCHVARIANT:16-3.5-alpine3.20 \
+    --target ${dockername}:16-3.5-alpine3.20 || true
 
-echo "manifest: ${dockername}:16-3.5.0rc1-alpine"
+echo "manifest: ${dockername}:16-3.5.0-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:16-3.5.0rc1-alpine \
-    --target ${dockername}:16-3.5.0rc1-alpine || true
+    --template ${dockername}-ARCHVARIANT:16-3.5.0-alpine3.20 \
+    --target ${dockername}:16-3.5.0-alpine3.20 || true
+
+echo "manifest: ${dockername}:16-3.5-alpine"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:16-3.5-alpine \
+    --target ${dockername}:16-3.5-alpine || true
 
 # ----- 16-l3.5.0rc1-bookworm -----
 
@@ -710,17 +770,17 @@ manifest-tool push from-args \
     --template ${dockername}-ARCHVARIANT:16-recent-bookworm \
     --target ${dockername}:16-recent-bookworm || true
 
-echo "manifest: ${dockername}:16-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm"
+echo "manifest: ${dockername}:16-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:16-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm \
-    --target ${dockername}:16-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm || true
+    --template ${dockername}-ARCHVARIANT:16-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm \
+    --target ${dockername}:16-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm || true
 
-echo "manifest: ${dockername}:16-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm"
+echo "manifest: ${dockername}:16-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:16-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm \
-    --target ${dockername}:16-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm || true
+    --template ${dockername}-ARCHVARIANT:16-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm \
+    --target ${dockername}:16-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm || true
 
 echo "manifest: ${dockername}:16-recent"
 manifest-tool push from-args \
@@ -756,25 +816,37 @@ manifest-tool push from-args \
 
 # ----- 17rc1-3.5-alpine3.19 -----
 
-echo "manifest: ${dockername}:17rc1-3.5.0rc1-alpine3.19"
+echo "manifest: ${dockername}:17rc1-3.5-alpine3.19"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:17rc1-3.5.0rc1-alpine3.19 \
-    --target ${dockername}:17rc1-3.5.0rc1-alpine3.19 || true
+    --template ${dockername}-ARCHVARIANT:17rc1-3.5-alpine3.19 \
+    --target ${dockername}:17rc1-3.5-alpine3.19 || true
+
+echo "manifest: ${dockername}:17rc1-3.5.0-alpine3.19"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:17rc1-3.5.0-alpine3.19 \
+    --target ${dockername}:17rc1-3.5.0-alpine3.19 || true
 
 # ----- 17rc1-3.5-alpine3.20 -----
 
-echo "manifest: ${dockername}:17rc1-3.5.0rc1-alpine3.20"
+echo "manifest: ${dockername}:17rc1-3.5-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:17rc1-3.5.0rc1-alpine3.20 \
-    --target ${dockername}:17rc1-3.5.0rc1-alpine3.20 || true
+    --template ${dockername}-ARCHVARIANT:17rc1-3.5-alpine3.20 \
+    --target ${dockername}:17rc1-3.5-alpine3.20 || true
 
-echo "manifest: ${dockername}:17rc1-3.5.0rc1-alpine"
+echo "manifest: ${dockername}:17rc1-3.5.0-alpine3.20"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:17rc1-3.5.0rc1-alpine \
-    --target ${dockername}:17rc1-3.5.0rc1-alpine || true
+    --template ${dockername}-ARCHVARIANT:17rc1-3.5.0-alpine3.20 \
+    --target ${dockername}:17rc1-3.5.0-alpine3.20 || true
+
+echo "manifest: ${dockername}:17rc1-3.5-alpine"
+manifest-tool push from-args \
+    --platforms linux/amd64,linux/arm64 \
+    --template ${dockername}-ARCHVARIANT:17rc1-3.5-alpine \
+    --target ${dockername}:17rc1-3.5-alpine || true
 
 # ----- 17rc1-l3.5.0rc1-bookworm -----
 
@@ -812,17 +884,17 @@ manifest-tool push from-args \
     --template ${dockername}-ARCHVARIANT:17rc1-recent-bookworm \
     --target ${dockername}:17rc1-recent-bookworm || true
 
-echo "manifest: ${dockername}:17rc1-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm"
+echo "manifest: ${dockername}:17rc1-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:17rc1-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm \
-    --target ${dockername}:17rc1-recent-postgis3.4.3-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm || true
+    --template ${dockername}-ARCHVARIANT:17rc1-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm \
+    --target ${dockername}:17rc1-recent-postgis3.5.0-geos3.13.0-proj9.5.0-gdal3.9.2-cgal5.6.1-sfcgal1.5.2-bookworm || true
 
-echo "manifest: ${dockername}:17rc1-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm"
+echo "manifest: ${dockername}:17rc1-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm"
 manifest-tool push from-args \
     --platforms linux/amd64,linux/arm64 \
-    --template ${dockername}-ARCHVARIANT:17rc1-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm \
-    --target ${dockername}:17rc1-recent-postgis3.4-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm || true
+    --template ${dockername}-ARCHVARIANT:17rc1-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm \
+    --target ${dockername}:17rc1-recent-postgis3.5-geos3.13-proj9.5-gdal3.9-cgal5.6-sfcgal1.5-bookworm || true
 
 echo "manifest: ${dockername}:17rc1-recent"
 manifest-tool push from-args \
