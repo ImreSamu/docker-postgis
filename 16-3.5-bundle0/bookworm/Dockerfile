@@ -1,6 +1,6 @@
 #
-# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
-#       source: "Dockerfile.bundle0.template"
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "./tools/apply-templates.sh"
+#       source: "./templates/Dockerfile.bundle0.template"
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
@@ -12,9 +12,9 @@
 
 # set the base image ,  make build-* is overwriting with the actual value !
 
-ARG REGISTRY=docker.io
-ARG REPO_NAME=imresamu
-ARG IMAGE_NAME=postgis-amd64
+ARG REGISTRY=localhost:5000
+ARG REPO_NAME=testrepo
+ARG IMAGE_NAME=testpostgisimage-amd64
 
 ARG PGIS1_BASE_IMAGE=${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}:16-3.5-bookworm
 

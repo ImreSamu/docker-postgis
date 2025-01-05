@@ -1,6 +1,6 @@
 #
-# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
-#       source: "Dockerfile.debian.template"
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "./tools/apply-templates.sh"
+#       source: "./templates/Dockerfile.debian.template"
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 FROM postgres:12-bookworm

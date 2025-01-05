@@ -2,13 +2,14 @@
 set -Eeuo pipefail
 # Source environment variables and necessary configurations
 source tools/environment_init.sh
+[ -f ./versions.json ]
 
 #
 # Updating the docker manifest for the postgis image.
 # This script uses the version.json metadata file as input to create the updated manifest.
 #   manifest-tool doc : https://github.com/estesp/manifest-tool
 #
-# NOTE: THIS FILE IS GENERATED VIA "./apply-manifest.sh"
+# NOTE: THIS FILE IS GENERATED VIA "./tools/apply-manifest.sh"
 # PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
