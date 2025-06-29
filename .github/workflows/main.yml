@@ -69,9 +69,9 @@ jobs:
            - { version: "17-3.6", variant: "alpine3.22" }
            - { version: "17-master", variant: "bookworm" }
            - { version: "17-recent", variant: "bookworm" }
-#           - { version: "18-3.5", variant: "alpine3.22" }
-#           - { version: "18-3.5", variant: "bookworm" }
-#           - { version: "18-3.6", variant: "alpine3.22" }
+           - { version: "18-3.5", variant: "alpine3.22" }
+           - { version: "18-3.5", variant: "bookworm" }
+           - { version: "18-3.6", variant: "alpine3.22" }
            - { version: "18-master", variant: "bookworm" }
            - { version: "18-recent", variant: "bookworm" }
 #matrix-include-end

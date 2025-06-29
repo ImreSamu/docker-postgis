@@ -18,7 +18,7 @@ cache_is_valid() {
     local cache_file="$1"
     local ttl_hours="${2:-6}"
     local max_age=$((ttl_hours * 3600))
-
+    
     if [[ -f "$cache_file" ]]; then
         local file_age=$(( $(date +%s) - $(stat -c %Y "$cache_file") ))
         if [[ $file_age -lt $max_age ]]; then
@@ -33,9 +33,9 @@ cache_get() {
     local cache_key="$1"
     local cache_file="${CACHE_DIR}/${cache_key}.txt"
     local ttl_hours="${2:-6}"
-
+    
     cache_init
-
+    
     if cache_is_valid "$cache_file" "$ttl_hours"; then
         echo "# Cache hit: $cache_key ($(stat -c %y "$cache_file"))" >&2
         cat "$cache_file"
@@ -51,27 +51,26 @@ cache_store() {
     local cache_key="$1"
     local data="$2"
     local cache_file="${CACHE_DIR}/${cache_key}.txt"
-
+    
     cache_init
-
+    
     echo "$data" > "$cache_file"
-
+    
     # Update timestamp record
     grep -v "^${cache_key}=" "$CACHE_TIMESTAMPS_FILE" > "${CACHE_TIMESTAMPS_FILE}.tmp" 2>/dev/null || true
     echo "${cache_key}=$(date +%s)" >> "${CACHE_TIMESTAMPS_FILE}.tmp"
     mv "${CACHE_TIMESTAMPS_FILE}.tmp" "$CACHE_TIMESTAMPS_FILE"
-
+    
     echo "# Cached: $cache_key" >&2
 }
 
 # Clean old cache files
 cache_cleanup() {
     local days_old="${1:-7}"
-    local seconds_old=$((days_old * 24 * 3600))
-
+    
     if [[ -d "$CACHE_DIR" ]]; then
         echo "# Cleaning cache files older than $days_old days..." >&2
-        find "$CACHE_DIR" -name "*.txt" -type f -mtime +$days_old -delete 2>/dev/null || true
+        find "$CACHE_DIR" -name "*.txt" -type f -mtime +"$days_old" -delete 2>/dev/null || true
     fi
 }
 
@@ -92,17 +91,17 @@ cached_curl() {
     local url="$2"
     local ttl_hours="${3:-6}"
     shift 3
-    local curl_args="$@"
-
+    local curl_args=("$@")
+    
     # Try cache first
     if cache_get "$cache_key" "$ttl_hours"; then
         return 0
     fi
-
+    
     # Cache miss - make API call
     echo "# Fetching from API: $url" >&2
     local response
-    if response=$(curl -s $curl_args "$url"); then
+    if response=$(curl -s "${curl_args[@]}" "$url"); then
         cache_store "$cache_key" "$response"
         echo "$response"
         return 0
@@ -115,21 +114,21 @@ cached_curl() {
 # Check GitHub rate limit before making API calls
 check_github_rate_limit() {
     local min_required="${1:-8}"  # Default: need at least 8 requests
-
+    
     echo "# Checking GitHub rate limit before API calls..."
-
+    
     # Get rate limit info from headers
     local rateLimitHeaders
     if ! rateLimitHeaders=$(curl -sI https://api.github.com/users/postgis 2>/dev/null | grep -i x-ratelimit); then
         echo "# Failed to check GitHub rate limit - proceeding with caution"
         return 0  # Allow to continue if check fails
     fi
-
+    
     local rateLimitRemaining
     rateLimitRemaining=$(echo "$rateLimitHeaders" | grep -i 'x-ratelimit-remaining:' | grep -o '[[:digit:]]*' || echo "0")
-
+    
     echo "# GitHub rate limit remaining: $rateLimitRemaining"
-
+    
     if [ "${rateLimitRemaining}" -le "${min_required}" ]; then
         echo
         echo " You do not have enough github requests available to continue!"
@@ -147,7 +146,7 @@ check_github_rate_limit() {
         echo "$rateLimitHeaders" | grep -i 'x-ratelimit-reset:' | cut -d' ' -f2 | xargs -I {} date -d @{} 2>/dev/null || echo "Unable to parse reset time"
         return 1  # Fail - not enough requests
     fi
-
+    
     return 0  # Success - enough requests available
 }
 

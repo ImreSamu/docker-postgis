@@ -168,9 +168,9 @@ workflows:
                 "17-3.6-alpine3.22",
                 "17-master-bookworm",
                 "17-recent-bookworm",
-#                "18-3.5-alpine3.22",
-#                "18-3.5-bookworm",
-#                "18-3.6-alpine3.22",
+                "18-3.5-alpine3.22",
+                "18-3.5-bookworm",
+                "18-3.6-alpine3.22",
                 "18-master-bookworm",
                 "18-recent-bookworm",
 #circleci-targets-end

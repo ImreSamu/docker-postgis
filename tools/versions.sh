@@ -75,7 +75,8 @@ function get_tag_hash() {
     version=${version#tags/}
 
     # Cache git ls-remote calls (6 hour TTL)
-    local cache_key="git_tag_hash_$(echo "$repo" | sed 's/[^a-zA-Z0-9]/_/g')_$version"
+    local cache_key
+    cache_key="git_tag_hash_${repo//[^a-zA-Z0-9]/_}_$version"
     if tagResponse=$(cache_get "$cache_key" 6); then
         echo "$tagResponse"
     else
@@ -236,20 +237,22 @@ get_latest_version_and_hash() {
 
     # Save original repo_only for cache key
     local original_repo_only="$repo_only"
-
+    
     # Create cache key based on all parameters
     local cache_key="lastversion_${repo_id}_${repo_development}_${original_repo_only}_${checkout_lock}"
-    cache_key=$(echo "$cache_key" | sed 's/[^a-zA-Z0-9]/_/g')
-
+    cache_key=${cache_key//[^a-zA-Z0-9]/_}
+    
     echo "[+] Checking lastversion : $repo_id  - $repo_url"
-
+    
     # Try cache first (6 hour TTL)
     if cachedResult=$(cache_get "$cache_key" 6); then
         echo "    Using cached result for $repo_id"
         # Parse cached result: version|sha1
-        local cached_version=$(echo "$cachedResult" | cut -d'|' -f1)
-        local cached_sha1=$(echo "$cachedResult" | cut -d'|' -f2)
-
+        local cached_version
+        local cached_sha1
+        cached_version=$(echo "$cachedResult" | cut -d'|' -f1)
+        cached_sha1=$(echo "$cachedResult" | cut -d'|' -f2)
+        
         # Set the variables as the original function would (after repo_only processing)
         if [[ "$repo_only" == "norepo" ]]; then
             repo_only=""
@@ -257,13 +260,13 @@ get_latest_version_and_hash() {
         local var_name="lastversion_${repo_id}${repo_only}"
         eval "${var_name}=${cached_version}"
         eval "${var_name}_sha1=${cached_sha1}"
-
+        
         echo "    lastversion_${repo_id}${repo_only} = ${cached_version}"
         echo "    lastversion_${repo_id}${repo_only}_sha1 = ${cached_sha1}"
         echo "    "
         return 0
     fi
-
+    
     # Cache miss - fetch from API
     # Fetch the latest version tag using the lastversion command
 
@@ -306,7 +309,7 @@ get_latest_version_and_hash() {
     local sha1_value=${!sha1_var_name}
     echo "    lastversion_${repo_id}${repo_only}_sha1 = ${sha1_value}"
     echo "    "
-
+    
     # Store result in cache: version|sha1
     cache_store "$cache_key" "${last_version}|${sha1_value}"
 
@@ -330,13 +333,15 @@ get_latest_version_and_hash_optional() {
     local checkout_lock="${5:-}"
 
     echo "[+] Checking lastversion (optional): $repo_id  - $repo_url"
-
+    
     # Try to get the version, but don't exit on failure
     if [ -z "$repo_only" ]; then
-        local version_result=$(lastversion ${repo_development} --format tag "${repo_url}" 2>/dev/null || echo "")
+        local version_result
+        version_result=$(lastversion "${repo_development}" --format tag "${repo_url}" 2>/dev/null || echo "")
         eval "lastversion_${repo_id}=${version_result}"
     else
-        local version_result=$(lastversion ${repo_development} --format tag --only "${repo_only}" "${repo_url}" 2>/dev/null || echo "")
+        local version_result
+        version_result=$(lastversion "${repo_development}" --format tag --only "${repo_only}" "${repo_url}" 2>/dev/null || echo "")
         eval "lastversion_${repo_id}${repo_only}=${version_result}"
     fi
 
