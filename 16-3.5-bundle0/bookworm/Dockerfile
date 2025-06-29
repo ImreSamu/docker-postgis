@@ -63,6 +63,8 @@ RUN set -eux \
       libmagic-dev \
       # pgsoudium \
       libsodium-dev \
+      # pg_curl
+      libcurl4-gnutls-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -102,14 +104,16 @@ RUN pgxn install --verbose pg_xenophile
 RUN pgxn install --verbose pg_xxhash
 RUN pgxn install --verbose pgsodium
 RUN pgxn install --verbose pgsql_tweaks
-RUN pgxn install --verbose sqlite_fdw
+# RUN pgxn install --verbose sqlite_fdw
 
+# pg_duckdb
 RUN set -eux \
     && curl -sfL https://install.pgx.sh -o /tmp/pgx-install.sh \
     && chmod +x /tmp/pgx-install.sh \
     && /tmp/pgx-install.sh \
     && rm /tmp/pgx-install.sh
 RUN pgxman install pg_duckdb
+
 #RUN pgxman install hydra_columnar
 #RUN pgxman install pgvectorscale
 #RUN pgxman install pg_quack
@@ -297,11 +301,11 @@ RUN arch=$(uname -m) \
         x86_64) \
             duck_binary="duckdb_cli-linux-amd64.zip" ;; \
         aarch64) \
-            duck_binary="duckdb_cli-linux-aarch64.zip" ;; \
+            duck_binary="duckdb_cli-linux-arm64.zip" ;; \
         *) \
             echo "Unsupported architecture: $arch"; exit 1 ;; \
     esac \
-    && wget https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/$duck_binary \
+    && wget https://github.com/duckdb/duckdb/releases/download/v${DUCKDB_VERSION}/$duck_binary \
     && unzip $duck_binary -d /usr/local/bin \
     && rm $duck_binary \
     && duckdb --version
