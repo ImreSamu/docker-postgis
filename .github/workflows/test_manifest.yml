@@ -49,14 +49,14 @@ jobs:
             target: "linux/arm64"
             runner: "ubuntu-22.04-arm"
             arch_variant: "arm64"
-          - image_dir: "18-3.5/bookworm"
-            target: "linux/arm/v6"
-            runner: "ubuntu-22.04-arm"
-            arch_variant: "armv6"
-          - image_dir: "18-3.5/bookworm"
-            target: "linux/arm/v7"
-            runner: "ubuntu-22.04-arm"
-            arch_variant: "armv7"
+#          - image_dir: "18-3.5/bookworm"
+#            target: "linux/arm/v6"
+#            runner: "ubuntu-22.04-arm"
+#            arch_variant: "armv6"
+#          - image_dir: "18-3.5/bookworm"
+#            target: "linux/arm/v7"
+#            runner: "ubuntu-22.04-arm"
+#            arch_variant: "armv7"
 
           # 18-3.6/alpine3.22 builds
           - image_dir: "18-3.6/alpine3.22"
@@ -67,14 +67,14 @@ jobs:
             target: "linux/arm64"
             runner: "ubuntu-22.04-arm"
             arch_variant: "arm64"
-          - image_dir: "18-3.6/alpine3.22"
-            target: "linux/arm/v6"
-            runner: "ubuntu-22.04-arm"
-            arch_variant: "armv6"
-          - image_dir: "18-3.6/alpine3.22"
-            target: "linux/arm/v7"
-            runner: "ubuntu-22.04-arm"
-            arch_variant: "armv7"
+#          - image_dir: "18-3.6/alpine3.22"
+#            target: "linux/arm/v6"
+#            runner: "ubuntu-22.04-arm"
+#            arch_variant: "armv6"
+#          - image_dir: "18-3.6/alpine3.22"
+#            target: "linux/arm/v7"
+#            runner: "ubuntu-22.04-arm"
+#            arch_variant: "armv7"
 
           # Future architecture support
           # - target: "linux/mips64le"
@@ -319,7 +319,8 @@ jobs:
       run: |
         set -x
         TAGS_JSON='${{ steps.read-original-tags.outputs.tags }}'
-        ARCHITECTURES=("amd64" "arm64" "armv6" "armv7")
+        ARCHITECTURES=("amd64" "arm64")
+        #### not used "armv6" "armv7" ###
 
         ALL_REGISTRIES="${{ env.REGISTRY }}"
         [[ -n "${{ inputs.additional_registries }}" ]] && ALL_REGISTRIES="$ALL_REGISTRIES,${{ inputs.additional_registries }}"
@@ -464,8 +465,6 @@ jobs:
         ### Architecture Support & Testing
         - linux/amd64: ubuntu-22.04 (native testing)
         - linux/arm64: ubuntu-22.04-arm (native testing)
-        - linux/arm/v6: ubuntu-22.04-arm (QEMU testing)
-        - linux/arm/v7: ubuntu-22.04-arm (QEMU testing)
 
         ### Images Built
         - 18-3.5/bookworm: PostgreSQL 18beta1 + PostGIS 3.5 (Debian)
