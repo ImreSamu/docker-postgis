@@ -32,7 +32,7 @@ env:
   DOCKER_BUILDKIT: '1'
   REGISTRY: 'docker.io'
   REPO_NAME: 'imresamu'
-  IMAGE_NAME: 'postgis'
+  IMAGE_NAME: 'postgistest'
 
 jobs:
   build-images:
@@ -213,6 +213,7 @@ jobs:
         file: ${{ matrix.image_dir }}/Dockerfile
         platforms: ${{ matrix.target }}
         push: false
+        load: true
         tags: ${{ steps.generate-tags.outputs.docker_tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -220,6 +221,10 @@ jobs:
         sbom: false
         build-args: |
           BUILDKIT_INLINE_CACHE=1
+
+
+    - name: List docker images
+      run: docker images
 
     - name: Test built image with official test suite
       run: |
@@ -250,34 +255,9 @@ jobs:
       if: ${{ inputs.push_images && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch') }}
       run: |
         set -x
-        TAGS_JSON='${{ steps.read-tags.outputs.tags }}'
-        ALL_REGISTRIES="${{ env.REGISTRY }}"
-
-        if [[ -n "${{ inputs.additional_registries }}" ]]; then
-          IFS=',' read -ra ADDITIONAL <<< "${{ inputs.additional_registries }}"
-          for reg in "${ADDITIONAL[@]}"; do
-            reg=$(echo "$reg" | xargs)
-            ALL_REGISTRIES="$ALL_REGISTRIES,$reg"
-          done
-        fi
-
-        IFS=',' read -ra REGISTRIES <<< "$ALL_REGISTRIES"
-        for registry in "${REGISTRIES[@]}"; do
-          registry=$(echo "$registry" | xargs)
-          for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-            case "$registry" in
-              "ghcr.io")
-                FULL_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
-                ;;
-              "quay.io")
-                FULL_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
-                ;;
-              *)
-                FULL_TAG="$registry/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
-                ;;
-            esac
-            docker push "$FULL_TAG"
-          done
+        # Reuse tags from generate-tags step
+        echo '${{ steps.generate-tags.outputs.docker_tags }}' | tr ',' '\n' | while read -r tag; do
+          docker push "$tag"
         done
 
   create-manifests:
