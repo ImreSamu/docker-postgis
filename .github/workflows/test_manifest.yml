@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - manifest  # Controlled by TARGET_BRANCH env var, change here for testing
+      - manifest  # Change to 'master' for production, 'manifest' for testing
     paths:
       - '.github/workflows/test_manifest.yml'
 #multi-arch-paths-start
@@ -30,7 +30,11 @@ env:
   IMAGE_NAME: 'postgistest'
   
   # Define target branch for automated builds - easily configurable for testing
-  TARGET_BRANCH: 'manifest'  # Change to 'master' for production
+  TARGET_BRANCH: 'manifest'  # Change to 'master' for production, 'manifest' for testing
+  
+  # Define image naming patterns centrally - improves maintainability
+  IMAGE_TAG_PATTERN: '${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}'
+  ARCH_TAG_PATTERN: '${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-{ARCH}'
   
   # Define supported architectures centrally - currently active: amd64, arm64
   # To add more architectures, add them to this array and configure mappings below
@@ -89,7 +93,17 @@ jobs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
       architectures: ${{ env.SUPPORTED_ARCHITECTURES }}
       image_dirs: ${{ env.IMAGE_DIRECTORIES }}
+      should_push: ${{ steps.check-conditions.outputs.should_push }}
     steps:
+    - name: Check push conditions
+      id: check-conditions
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/manifest" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then  # Change to 'master' for production, 'manifest' for testing
+          echo "should_push=true" >> $GITHUB_OUTPUT
+        else
+          echo "should_push=false" >> $GITHUB_OUTPUT
+        fi
+        echo "Push condition result: $(cat $GITHUB_OUTPUT | grep should_push)"
     - name: Generate build matrix
       id: generate-matrix
       run: |
@@ -157,7 +171,7 @@ jobs:
         tools/environment_init.sh
 
     - name: Check Docker Hub credentials
-      if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
+      if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
       run: |
         set -x
         [[ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]] || { echo "DOCKERHUB_USERNAME missing"; exit 1; }
@@ -165,7 +179,7 @@ jobs:
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
-      if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
+      if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
@@ -190,7 +204,8 @@ jobs:
         DOCKER_TAGS=""
         
         for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-          FULL_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
+          ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${{ matrix.arch_variant }}/")
+          FULL_TAG="${ARCH_TAG_BASE}:${tag}"
           [[ -z "$DOCKER_TAGS" ]] && DOCKER_TAGS="$FULL_TAG" || DOCKER_TAGS="$DOCKER_TAGS,$FULL_TAG"
         done
 
@@ -221,7 +236,8 @@ jobs:
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
-        TEST_IMAGE="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${FIRST_TAG}"
+        ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${{ matrix.arch_variant }}/")
+        TEST_IMAGE="${ARCH_TAG_BASE}:${FIRST_TAG}"
 
         echo "Testing natively for ${{ matrix.target }}"
 
@@ -234,7 +250,7 @@ jobs:
         ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
 
     - name: Push Docker image
-      if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
+      if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
       run: |
         set -x
         echo '${{ steps.generate-tags.outputs.docker_tags }}' | tr ',' '\n' | while read -r tag; do
@@ -245,7 +261,7 @@ jobs:
     name: "Create Multi-Arch Manifests"
     needs: [prepare-matrix, build-images]
     runs-on: ubuntu-22.04
-    if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
 
     strategy:
       matrix:
@@ -281,13 +297,14 @@ jobs:
         ARCH_ANNOTATIONS='${{ env.ARCH_ANNOTATIONS }}'
 
         for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-          MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${tag}"
+          MANIFEST_TAG="${{ env.IMAGE_TAG_PATTERN }}:${tag}"
           
           docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
 
           MANIFEST_CMD="docker manifest create --amend $MANIFEST_TAG"
           for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
+            ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${arch}/")
+            ARCH_TAG="${ARCH_TAG_BASE}:${tag}"
             MANIFEST_CMD="$MANIFEST_CMD $ARCH_TAG"
           done
           
@@ -298,7 +315,8 @@ jobs:
 
           # Annotate each architecture with proper platform metadata
           for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
+            ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${arch}/")
+            ARCH_TAG="${ARCH_TAG_BASE}:${tag}"
             ANNOTATION=$(echo "$ARCH_ANNOTATIONS" | jq -r ".[\"$arch\"]")
             
             OS=$(echo "$ANNOTATION" | jq -r '.os')
@@ -320,7 +338,7 @@ jobs:
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-original-tags.outputs.tags }}' | jq -r '.[0]')
-        MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
+        MANIFEST_TAG="${{ env.IMAGE_TAG_PATTERN }}:${FIRST_TAG}"
         
         MANIFEST_INFO=$(docker manifest inspect "$MANIFEST_TAG")
         ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
@@ -393,6 +411,6 @@ jobs:
         ### Registry Configuration
         EOF
 
-        echo "- Registry: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Push Images: ${{ (github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch') && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Registry: ${{ env.IMAGE_TAG_PATTERN }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Push Images: ${{ needs.prepare-matrix.outputs.should_push == 'true' && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
         echo "- Target Branch: ${{ env.TARGET_BRANCH }}" >> $GITHUB_STEP_SUMMARY
