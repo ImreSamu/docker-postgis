@@ -62,6 +62,18 @@ env:
     "mips64le": "linux/mips64le"
   }'
   
+  # Define architecture emoji mapping for better job visibility
+  ARCH_EMOJIS: '{
+    "amd64": "💻",
+    "arm64": "💪",
+    "armv6": "🦾",
+    "armv7": "🤖",
+    "386": "🖥️",
+    "ppc64le": "⚡",
+    "s390x": "🏢",
+    "mips64le": "🎯"
+  }'
+  
   # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
   ARCH_ANNOTATIONS: '{
     "amd64": {"os": "linux", "arch": "amd64"},
@@ -79,7 +91,7 @@ env:
 
 jobs:
   prepare-matrix:
-    name: "Prepare Build Matrix"
+    name: "🌍 Prepare Matrix"
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
@@ -104,6 +116,7 @@ jobs:
         ARCHITECTURES='${{ env.SUPPORTED_ARCHITECTURES }}'
         ARCH_RUNNERS='${{ env.ARCH_RUNNERS }}'
         ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
+        ARCH_EMOJIS='${{ env.ARCH_EMOJIS }}'
         
         MATRIX_JSON='{"include":[]}'
         
@@ -111,17 +124,20 @@ jobs:
           for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
             runner=$(echo "$ARCH_RUNNERS" | jq -r ".[\"$arch\"]")
             platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
+            emoji=$(echo "$ARCH_EMOJIS" | jq -r ".[\"$arch\"]")
             
             ENTRY=$(jq -n \
               --arg image_dir "$image_dir" \
               --arg arch "$arch" \
               --arg runner "$runner" \
               --arg platform "$platform" \
+              --arg emoji "$emoji" \
               '{
                 image_dir: $image_dir,
                 arch_variant: $arch,
                 runner: $runner,
-                target: $platform
+                target: $platform,
+                arch_emoji: $emoji
               }')
             
             MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".include += [$ENTRY]")
@@ -135,7 +151,7 @@ jobs:
         echo "$MATRIX_JSON" | jq '.'
 
   build-images:
-    name: "Build ${{ matrix.image_dir }} for ${{ matrix.arch_variant }}"
+    name: "${{ matrix.arch_emoji }} ${{ matrix.arch_variant }} | ${{ matrix.image_dir }}"
     needs: prepare-matrix
     runs-on: ${{ matrix.runner }}
     continue-on-error: false
@@ -251,7 +267,7 @@ jobs:
         done
 
   create-manifests:
-    name: "Create Multi-Arch Manifests"
+    name: "📦 ${{ matrix.image_dir }} | manifest"
     needs: [prepare-matrix, build-images]
     runs-on: ubuntu-22.04
     if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
@@ -344,7 +360,7 @@ jobs:
         fi
 
   summary:
-    name: "Build Summary"
+    name: "📊 Build Summary"
     needs: [prepare-matrix, build-images, create-manifests]
     runs-on: ubuntu-22.04
     if: always()
