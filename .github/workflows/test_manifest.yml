@@ -75,12 +75,7 @@ env:
   }'
   
   # Define image directories to build - automatically updated by tools/apply-ci.sh
-  IMAGE_DIRECTORIES: '[
-#multi-arch-include-start
-    "18-3.5/bookworm",
-    "18-3.6/alpine3.22"
-#multi-arch-include-end
-  ]'
+  IMAGE_DIRECTORIES: '["18-3.5/bookworm", "18-3.6/alpine3.22"]'  # multi-arch-include: change here for testing
 
 jobs:
   prepare-matrix:
