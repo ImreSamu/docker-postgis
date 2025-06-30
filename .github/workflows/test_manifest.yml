@@ -2,27 +2,22 @@ name: Multi-Architecture Docker Manifest Test
 
 on:
   workflow_dispatch:
-    inputs:
-      push_images:
-        description: 'Push images to registry'
-        required: false
-        default: true
-        type: boolean
-      additional_registries:
-        description: 'Additional registries (comma-separated, e.g., ghcr.io,quay.io)'
-        required: false
-        default: ''
-        type: string
   push:
+    branches:
+      - manifest  # Controlled by TARGET_BRANCH env var, change here for testing
     paths:
       - '.github/workflows/test_manifest.yml'
+#multi-arch-paths-start
       - '18-3.5/bookworm/**'
       - '18-3.6/alpine3.22/**'
+#multi-arch-paths-end
   pull_request:
     paths:
       - '.github/workflows/test_manifest.yml'
+#multi-arch-paths-start
       - '18-3.5/bookworm/**'
       - '18-3.6/alpine3.22/**'
+#multi-arch-paths-end
 
 defaults:
   run:
@@ -33,66 +28,111 @@ env:
   REGISTRY: 'docker.io'
   REPO_NAME: 'imresamu'
   IMAGE_NAME: 'postgistest'
+  
+  # Define target branch for automated builds - easily configurable for testing
+  TARGET_BRANCH: 'manifest'  # Change to 'master' for production
+  
+  # Define supported architectures centrally - currently active: amd64, arm64
+  # To add more architectures, add them to this array and configure mappings below
+  SUPPORTED_ARCHITECTURES: '["amd64", "arm64"]'
+  # For additional architectures, add like: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "s390x", "mips64le"]'
+  
+  # Define architecture to runner mapping - all architectures defined for easy expansion
+  ARCH_RUNNERS: '{
+    "amd64": "ubuntu-22.04",
+    "arm64": "ubuntu-22.04-arm",
+    "armv6": "ubuntu-22.04-arm",
+    "armv7": "ubuntu-22.04-arm",
+    "386": "ubuntu-22.04",
+    "ppc64le": "ubuntu-22.04",
+    "s390x": "ubuntu-22.04",
+    "mips64le": "ubuntu-22.04"
+  }'
+  
+  # Define architecture to Docker platform mapping - all architectures defined for easy expansion
+  ARCH_PLATFORMS: '{
+    "amd64": "linux/amd64",
+    "arm64": "linux/arm64",
+    "armv6": "linux/arm/v6",
+    "armv7": "linux/arm/v7",
+    "386": "linux/386",
+    "ppc64le": "linux/ppc64le",
+    "s390x": "linux/s390x",
+    "mips64le": "linux/mips64le"
+  }'
+  
+  # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
+  ARCH_ANNOTATIONS: '{
+    "amd64": {"os": "linux", "arch": "amd64"},
+    "arm64": {"os": "linux", "arch": "arm64"},
+    "armv6": {"os": "linux", "arch": "arm", "variant": "v6"},
+    "armv7": {"os": "linux", "arch": "arm", "variant": "v7"},
+    "386": {"os": "linux", "arch": "386"},
+    "ppc64le": {"os": "linux", "arch": "ppc64le"},
+    "s390x": {"os": "linux", "arch": "s390x"},
+    "mips64le": {"os": "linux", "arch": "mips64le"}
+  }'
+  
+  # Define image directories to build - automatically updated by tools/apply-ci.sh
+  IMAGE_DIRECTORIES: '[
+#multi-arch-include-start
+    "18-3.5/bookworm",
+    "18-3.6/alpine3.22"
+#multi-arch-include-end
+  ]'
 
 jobs:
+  prepare-matrix:
+    name: "Prepare Build Matrix"
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+      architectures: ${{ env.SUPPORTED_ARCHITECTURES }}
+      image_dirs: ${{ env.IMAGE_DIRECTORIES }}
+    steps:
+    - name: Generate build matrix
+      id: generate-matrix
+      run: |
+        IMAGES='${{ env.IMAGE_DIRECTORIES }}'
+        ARCHITECTURES='${{ env.SUPPORTED_ARCHITECTURES }}'
+        ARCH_RUNNERS='${{ env.ARCH_RUNNERS }}'
+        ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
+        
+        MATRIX_JSON='{"include":[]}'
+        
+        for image_dir in $(echo "$IMAGES" | jq -r '.[]'); do
+          for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
+            runner=$(echo "$ARCH_RUNNERS" | jq -r ".[\"$arch\"]")
+            platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
+            
+            ENTRY=$(jq -n \
+              --arg image_dir "$image_dir" \
+              --arg arch "$arch" \
+              --arg runner "$runner" \
+              --arg platform "$platform" \
+              '{
+                image_dir: $image_dir,
+                arch_variant: $arch,
+                runner: $runner,
+                target: $platform
+              }')
+            
+            MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".include += [$ENTRY]")
+          done
+        done
+        
+        echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+        echo "Generated matrix:"
+        echo "$MATRIX_JSON" | jq '.'
+
   build-images:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # 18-3.5/bookworm builds
-          - image_dir: "18-3.5/bookworm"
-            target: "linux/amd64"
-            runner: "ubuntu-22.04"
-            arch_variant: "amd64"
-          - image_dir: "18-3.5/bookworm"
-            target: "linux/arm64"
-            runner: "ubuntu-22.04-arm"
-            arch_variant: "arm64"
-#          - image_dir: "18-3.5/bookworm"
-#            target: "linux/arm/v6"
-#            runner: "ubuntu-22.04-arm"
-#            arch_variant: "armv6"
-#          - image_dir: "18-3.5/bookworm"
-#            target: "linux/arm/v7"
-#            runner: "ubuntu-22.04-arm"
-#            arch_variant: "armv7"
-
-          # 18-3.6/alpine3.22 builds
-          - image_dir: "18-3.6/alpine3.22"
-            target: "linux/amd64"
-            runner: "ubuntu-22.04"
-            arch_variant: "amd64"
-          - image_dir: "18-3.6/alpine3.22"
-            target: "linux/arm64"
-            runner: "ubuntu-22.04-arm"
-            arch_variant: "arm64"
-#          - image_dir: "18-3.6/alpine3.22"
-#            target: "linux/arm/v6"
-#            runner: "ubuntu-22.04-arm"
-#            arch_variant: "armv6"
-#          - image_dir: "18-3.6/alpine3.22"
-#            target: "linux/arm/v7"
-#            runner: "ubuntu-22.04-arm"
-#            arch_variant: "armv7"
-
-          # Future architecture support
-          # - target: "linux/mips64le"
-          #   runner: "ubuntu-22.04"
-          #   arch_variant: "mips64le"
-          # - target: "linux/ppc64le"
-          #   runner: "ubuntu-22.04"
-          #   arch_variant: "ppc64le"
-          # - target: "linux/s390x"
-          #   runner: "ubuntu-22.04"
-          #   arch_variant: "s390x"
-          # - target: "linux/386"
-          #   runner: "ubuntu-22.04"
-          #   arch_variant: "386"
-
     name: "Build ${{ matrix.image_dir }} for ${{ matrix.arch_variant }}"
+    needs: prepare-matrix
     runs-on: ${{ matrix.runner }}
     continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
 
     steps:
     - name: Checkout source
@@ -117,7 +157,7 @@ jobs:
         tools/environment_init.sh
 
     - name: Check Docker Hub credentials
-      if: ${{ inputs.push_images }}
+      if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
       run: |
         set -x
         [[ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]] || { echo "DOCKERHUB_USERNAME missing"; exit 1; }
@@ -125,34 +165,10 @@ jobs:
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
-      if: ${{ inputs.push_images && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch') }}
+      if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-
-    - name: Login to additional registries
-      if: ${{ inputs.push_images && inputs.additional_registries != '' }}
-      run: |
-        set -x
-        IFS=',' read -ra REGISTRIES <<< "${{ inputs.additional_registries }}"
-        for registry in "${REGISTRIES[@]}"; do
-          registry=$(echo "$registry" | xargs)
-          case "$registry" in
-            "ghcr.io")
-              echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-              ;;
-            "quay.io")
-              if [[ -n "${{ secrets.QUAY_USERNAME }}" && -n "${{ secrets.QUAY_TOKEN }}" ]]; then
-                echo "${{ secrets.QUAY_TOKEN }}" | docker login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-              else
-                echo "Quay.io credentials not configured, skipping"
-              fi
-              ;;
-            *)
-              echo "Registry $registry not supported, skipping"
-              ;;
-          esac
-        done
 
     - name: Read tags from directory
       id: read-tags
@@ -172,34 +188,10 @@ jobs:
         set -x
         TAGS_JSON='${{ steps.read-tags.outputs.tags }}'
         DOCKER_TAGS=""
-        ALL_REGISTRIES="${{ env.REGISTRY }}"
-
-        if [[ -n "${{ inputs.additional_registries }}" ]]; then
-          IFS=',' read -ra ADDITIONAL <<< "${{ inputs.additional_registries }}"
-          for reg in "${ADDITIONAL[@]}"; do
-            reg=$(echo "$reg" | xargs)
-            ALL_REGISTRIES="$ALL_REGISTRIES,$reg"
-          done
-        fi
-
-        IFS=',' read -ra REGISTRIES <<< "$ALL_REGISTRIES"
-        for registry in "${REGISTRIES[@]}"; do
-          registry=$(echo "$registry" | xargs)
-          for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-            case "$registry" in
-              "ghcr.io")
-                FULL_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
-                ;;
-              "quay.io")
-                FULL_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
-                ;;
-              *)
-                FULL_TAG="$registry/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
-                ;;
-            esac
-
-            [[ -z "$DOCKER_TAGS" ]] && DOCKER_TAGS="$FULL_TAG" || DOCKER_TAGS="$DOCKER_TAGS,$FULL_TAG"
-          done
+        
+        for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
+          FULL_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
+          [[ -z "$DOCKER_TAGS" ]] && DOCKER_TAGS="$FULL_TAG" || DOCKER_TAGS="$DOCKER_TAGS,$FULL_TAG"
         done
 
         echo "docker_tags=$DOCKER_TAGS" >> $GITHUB_OUTPUT
@@ -222,7 +214,6 @@ jobs:
         build-args: |
           BUILDKIT_INLINE_CACHE=1
 
-
     - name: List docker images
       run: docker images
 
@@ -232,16 +223,7 @@ jobs:
         FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
         TEST_IMAGE="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${FIRST_TAG}"
 
-        # Set platform for non-native architectures
-        case "${{ matrix.target }}" in
-          "linux/arm/v6"|"linux/arm/v7")
-            export DOCKER_DEFAULT_PLATFORM="${{ matrix.target }}"
-            echo "Testing with DOCKER_DEFAULT_PLATFORM=${{ matrix.target }}"
-            ;;
-          *)
-            echo "Testing natively for ${{ matrix.target }}"
-            ;;
-        esac
+        echo "Testing natively for ${{ matrix.target }}"
 
         git clone --depth 1 https://github.com/docker-library/official-images.git
 
@@ -252,25 +234,22 @@ jobs:
         ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
 
     - name: Push Docker image
-      if: ${{ inputs.push_images && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch') }}
+      if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
       run: |
         set -x
-        # Reuse tags from generate-tags step
         echo '${{ steps.generate-tags.outputs.docker_tags }}' | tr ',' '\n' | while read -r tag; do
           docker push "$tag"
         done
 
   create-manifests:
     name: "Create Multi-Arch Manifests"
-    needs: build-images
+    needs: [prepare-matrix, build-images]
     runs-on: ubuntu-22.04
-    if: ${{ inputs.push_images && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch' }}
 
     strategy:
       matrix:
-        image_dir:
-          - "18-3.5/bookworm"
-          - "18-3.6/alpine3.22"
+        image_dir: ${{ fromJson(needs.prepare-matrix.outputs.image_dirs) }}
 
     steps:
     - name: Checkout source
@@ -281,27 +260,6 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-
-    - name: Login to additional registries
-      if: ${{ inputs.additional_registries != '' }}
-      run: |
-        set -x
-        IFS=',' read -ra REGISTRIES <<< "${{ inputs.additional_registries }}"
-        for registry in "${REGISTRIES[@]}"; do
-          registry=$(echo "$registry" | xargs)
-          case "$registry" in
-            "ghcr.io")
-              echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-              ;;
-            "quay.io")
-              if [[ -n "${{ secrets.QUAY_USERNAME }}" && -n "${{ secrets.QUAY_TOKEN }}" ]]; then
-                echo "${{ secrets.QUAY_TOKEN }}" | docker login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-              else
-                echo "Quay.io credentials not configured, skipping"
-              fi
-              ;;
-          esac
-        done
 
     - name: Read original tags
       id: read-original-tags
@@ -319,121 +277,66 @@ jobs:
       run: |
         set -x
         TAGS_JSON='${{ steps.read-original-tags.outputs.tags }}'
-        ARCHITECTURES=("amd64" "arm64")
-        #### not used "armv6" "armv7" ###
+        ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
+        ARCH_ANNOTATIONS='${{ env.ARCH_ANNOTATIONS }}'
 
-        ALL_REGISTRIES="${{ env.REGISTRY }}"
-        [[ -n "${{ inputs.additional_registries }}" ]] && ALL_REGISTRIES="$ALL_REGISTRIES,${{ inputs.additional_registries }}"
+        for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
+          MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${tag}"
+          
+          docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
 
-        IFS=',' read -ra REGISTRIES <<< "$ALL_REGISTRIES"
-
-        for registry in "${REGISTRIES[@]}"; do
-          registry=$(echo "$registry" | xargs)
-          for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-            case "$registry" in
-              "ghcr.io")
-                MANIFEST_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${tag}"
-                ;;
-              "quay.io")
-                MANIFEST_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${tag}"
-                ;;
-              *)
-                MANIFEST_TAG="$registry/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${tag}"
-                ;;
-            esac
-
-            docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
-
-            MANIFEST_CMD="docker manifest create --amend $MANIFEST_TAG"
-            for arch in "${ARCHITECTURES[@]}"; do
-              case "$registry" in
-                "ghcr.io")
-                  ARCH_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-                  ;;
-                "quay.io")
-                  ARCH_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-                  ;;
-                *)
-                  ARCH_TAG="$registry/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-                  ;;
-              esac
-              MANIFEST_CMD="$MANIFEST_CMD $ARCH_TAG"
-            done
-            eval "$MANIFEST_CMD"
-
-            for arch in "${ARCHITECTURES[@]}"; do
-              case "$registry" in
-                "ghcr.io")
-                  ARCH_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-                  ;;
-                "quay.io")
-                  ARCH_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-                  ;;
-                *)
-                  ARCH_TAG="$registry/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-                  ;;
-              esac
-              case "$arch" in
-                "amd64")
-                  docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os linux --arch amd64
-                  ;;
-                "arm64")
-                  docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os linux --arch arm64
-                  ;;
-                "armv6")
-                  docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os linux --arch arm --variant v6
-                  ;;
-                "armv7")
-                  docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os linux --arch arm --variant v7
-                  ;;
-              esac
-            done
-
-            docker manifest push "$MANIFEST_TAG"
-            docker manifest inspect "$MANIFEST_TAG" | jq '.manifests[] | {platform: .platform, digest: .digest}'
+          MANIFEST_CMD="docker manifest create --amend $MANIFEST_TAG"
+          for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
+            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
+            MANIFEST_CMD="$MANIFEST_CMD $ARCH_TAG"
           done
+          
+          if ! eval "$MANIFEST_CMD"; then
+            echo "Failed to create manifest for $MANIFEST_TAG"
+            exit 1
+          fi
+
+          # Annotate each architecture with proper platform metadata
+          for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
+            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
+            ANNOTATION=$(echo "$ARCH_ANNOTATIONS" | jq -r ".[\"$arch\"]")
+            
+            OS=$(echo "$ANNOTATION" | jq -r '.os')
+            ARCH_NAME=$(echo "$ANNOTATION" | jq -r '.arch')
+            VARIANT=$(echo "$ANNOTATION" | jq -r '.variant // empty')
+            
+            if [[ -n "$VARIANT" ]]; then
+              docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os "$OS" --arch "$ARCH_NAME" --variant "$VARIANT"
+            else
+              docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os "$OS" --arch "$ARCH_NAME"
+            fi
+          done
+
+          docker manifest push "$MANIFEST_TAG"
+          docker manifest inspect "$MANIFEST_TAG" | jq '.manifests[] | {platform: .platform, digest: .digest}'
         done
 
     - name: Test multi-architecture manifests
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-original-tags.outputs.tags }}' | jq -r '.[0]')
+        MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
+        
+        MANIFEST_INFO=$(docker manifest inspect "$MANIFEST_TAG")
+        ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
+        EXPECTED_ARCHS=$(echo "$ARCHITECTURES" | jq 'length')
+        ACTUAL_ARCHS=$(echo "$MANIFEST_INFO" | jq '.manifests | length')
 
-        ALL_REGISTRIES="${{ env.REGISTRY }}"
-        [[ -n "${{ inputs.additional_registries }}" ]] && ALL_REGISTRIES="$ALL_REGISTRIES,${{ inputs.additional_registries }}"
-
-        IFS=',' read -ra REGISTRIES <<< "$ALL_REGISTRIES"
-
-        for registry in "${REGISTRIES[@]}"; do
-          registry=$(echo "$registry" | xargs)
-
-          case "$registry" in
-            "ghcr.io")
-              MANIFEST_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
-              ;;
-            "quay.io")
-              MANIFEST_TAG="$registry/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
-              ;;
-            *)
-              MANIFEST_TAG="$registry/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
-              ;;
-          esac
-
-          MANIFEST_INFO=$(docker manifest inspect "$MANIFEST_TAG")
-          EXPECTED_ARCHS=4
-          ACTUAL_ARCHS=$(echo "$MANIFEST_INFO" | jq '.manifests | length')
-
-          if [[ "$ACTUAL_ARCHS" -eq "$EXPECTED_ARCHS" ]]; then
-            echo "$registry manifest OK: $ACTUAL_ARCHS/$EXPECTED_ARCHS architectures"
-          else
-            echo "$registry manifest ERROR: $ACTUAL_ARCHS/$EXPECTED_ARCHS architectures"
-            exit 1
-          fi
-        done
+        if [[ "$ACTUAL_ARCHS" -eq "$EXPECTED_ARCHS" ]]; then
+          echo "Manifest OK: $ACTUAL_ARCHS/$EXPECTED_ARCHS architectures"
+        else
+          echo "Manifest ERROR: $ACTUAL_ARCHS/$EXPECTED_ARCHS architectures"
+          exit 1
+        fi
 
   summary:
     name: "Build Summary"
-    needs: [build-images, create-manifests]
+    needs: [prepare-matrix, build-images, create-manifests]
     runs-on: ubuntu-22.04
     if: always()
 
@@ -460,25 +363,36 @@ jobs:
           echo "- Multi-Architecture Manifests: FAILED" >> $GITHUB_STEP_SUMMARY
         fi
 
+        ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
+        ARCH_RUNNERS='${{ env.ARCH_RUNNERS }}'
+        ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
+        
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
 
         ### Architecture Support & Testing
-        - linux/amd64: ubuntu-22.04 (native testing)
-        - linux/arm64: ubuntu-22.04-arm (native testing)
+        EOF
+        
+        for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
+          runner=$(echo "$ARCH_RUNNERS" | jq -r ".[\"$arch\"]")
+          platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
+          echo "- $platform: $runner (native testing)" >> $GITHUB_STEP_SUMMARY
+        done
+
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
 
         ### Images Built
-        - 18-3.5/bookworm: PostgreSQL 18beta1 + PostGIS 3.5 (Debian)
-        - 18-3.6/alpine3.22: PostgreSQL 18beta1 + PostGIS 3.6.0alpha1 (Alpine)
+        EOF
+        
+        IMAGE_DIRS='${{ needs.prepare-matrix.outputs.image_dirs }}'
+        for image_dir in $(echo "$IMAGE_DIRS" | jq -r '.[]'); do
+          echo "- $image_dir" >> $GITHUB_STEP_SUMMARY
+        done
+
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
 
         ### Registry Configuration
         EOF
 
-        echo "- Primary Registry: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-
-        if [[ -n "${{ inputs.additional_registries }}" ]]; then
-          echo "- Additional Registries: ${{ inputs.additional_registries }}" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "- Additional Registries: None" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        echo "- Push Images: ${{ inputs.push_images && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Registry: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Push Images: ${{ (github.ref == format('refs/heads/{0}', env.TARGET_BRANCH) || github.event_name == 'workflow_dispatch') && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Target Branch: ${{ env.TARGET_BRANCH }}" >> $GITHUB_STEP_SUMMARY
