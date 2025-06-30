@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/test_manifest.yml'
 #multi-arch-paths-start
+      - '17-3.5/alpine3.22/**'
       - '18-3.5/bookworm/**'
       - '18-3.6/alpine3.22/**'
 #multi-arch-paths-end
@@ -15,6 +16,7 @@ on:
     paths:
       - '.github/workflows/test_manifest.yml'
 #multi-arch-paths-start
+      - '17-3.5/alpine3.22/**'
       - '18-3.5/bookworm/**'
       - '18-3.6/alpine3.22/**'
 #multi-arch-paths-end
@@ -28,28 +30,28 @@ env:
   REGISTRY: 'docker.io'
   REPO_NAME: 'imresamu'
   IMAGE_NAME: 'postgistest'
-  
+
   # Define target branch for automated builds - easily configurable for testing
   TARGET_BRANCH: 'manifest'  # Change to 'master' for production, 'manifest' for testing
-  
-  
+
+
   # Define supported architectures centrally - currently active: amd64, arm64
   # To add more architectures, add them to this array and configure mappings below
-  SUPPORTED_ARCHITECTURES: '["amd64", "arm64"]'
+  SUPPORTED_ARCHITECTURES: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "s390x", "mips64le"]'
   # For additional architectures, add like: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "s390x", "mips64le"]'
-  
+
   # Define architecture to runner mapping - all architectures defined for easy expansion
   ARCH_RUNNERS: '{
-    "amd64": "ubuntu-22.04",
-    "arm64": "ubuntu-22.04-arm",
-    "armv6": "ubuntu-22.04-arm",
-    "armv7": "ubuntu-22.04-arm",
-    "386": "ubuntu-22.04",
-    "ppc64le": "ubuntu-22.04",
-    "s390x": "ubuntu-22.04",
-    "mips64le": "ubuntu-22.04"
+    "amd64": "ubuntu-24.04",
+    "arm64": "ubuntu-24.04-arm",
+    "armv6": "ubuntu-24.04-arm",
+    "armv7": "ubuntu-24.04-arm",
+    "386": "ubuntu-24.04",
+    "ppc64le": "ubuntu-24.04",
+    "s390x": "ubuntu-24.04",
+    "mips64le": "ubuntu-24.04"
   }'
-  
+
   # Define architecture to Docker platform mapping - all architectures defined for easy expansion
   ARCH_PLATFORMS: '{
     "amd64": "linux/amd64",
@@ -61,7 +63,7 @@ env:
     "s390x": "linux/s390x",
     "mips64le": "linux/mips64le"
   }'
-  
+
   # Define architecture emoji mapping for better job visibility
   ARCH_EMOJIS: '{
     "amd64": "💻",
@@ -73,7 +75,7 @@ env:
     "s390x": "🏢",
     "mips64le": "🎯"
   }'
-  
+
   # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
   ARCH_ANNOTATIONS: '{
     "amd64": {"os": "linux", "arch": "amd64"},
@@ -85,14 +87,14 @@ env:
     "s390x": {"os": "linux", "arch": "s390x"},
     "mips64le": {"os": "linux", "arch": "mips64le"}
   }'
-  
+
   # Define image directories to build - automatically updated by tools/apply-ci.sh
-  IMAGE_DIRECTORIES: '["18-3.5/bookworm", "18-3.6/alpine3.22"]'  # multi-arch-include: change here for testing
+  IMAGE_DIRECTORIES: '["17-3.5/alpine3.22", "17-3.5/bookworm"]'  # multi-arch-include: change here for testing
 
 jobs:
   prepare-matrix:
     name: "🌍 Prepare Matrix"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
       architectures: ${{ env.SUPPORTED_ARCHITECTURES }}
@@ -108,7 +110,7 @@ jobs:
           echo "should_push=false" >> $GITHUB_OUTPUT
         fi
         echo "Push condition result: $(cat $GITHUB_OUTPUT | grep should_push)"
-    
+
     - name: Generate build matrix
       id: generate-matrix
       run: |
@@ -117,15 +119,15 @@ jobs:
         ARCH_RUNNERS='${{ env.ARCH_RUNNERS }}'
         ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
         ARCH_EMOJIS='${{ env.ARCH_EMOJIS }}'
-        
+
         MATRIX_JSON='{"include":[]}'
-        
+
         for image_dir in $(echo "$IMAGES" | jq -r '.[]'); do
           for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
             runner=$(echo "$ARCH_RUNNERS" | jq -r ".[\"$arch\"]")
             platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
             emoji=$(echo "$ARCH_EMOJIS" | jq -r ".[\"$arch\"]")
-            
+
             ENTRY=$(jq -n \
               --arg image_dir "$image_dir" \
               --arg arch "$arch" \
@@ -139,11 +141,11 @@ jobs:
                 target: $platform,
                 arch_emoji: $emoji
               }')
-            
+
             MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".include += [$ENTRY]")
           done
         done
-        
+
         echo "matrix<<EOF" >> $GITHUB_OUTPUT
         echo "$MATRIX_JSON" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
@@ -213,7 +215,7 @@ jobs:
         set -x
         TAGS_JSON='${{ steps.read-tags.outputs.tags }}'
         DOCKER_TAGS=""
-        
+
         for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
           FULL_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
           [[ -z "$DOCKER_TAGS" ]] && DOCKER_TAGS="$FULL_TAG" || DOCKER_TAGS="$DOCKER_TAGS,$FULL_TAG"
@@ -269,7 +271,7 @@ jobs:
   create-manifests:
     name: "📦 ${{ matrix.image_dir }} | manifest"
     needs: [prepare-matrix, build-images]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
 
     strategy:
@@ -307,7 +309,7 @@ jobs:
 
         for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
           MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${tag}"
-          
+
           docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
 
           MANIFEST_CMD="docker manifest create --amend $MANIFEST_TAG"
@@ -315,7 +317,7 @@ jobs:
             ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
             MANIFEST_CMD="$MANIFEST_CMD $ARCH_TAG"
           done
-          
+
           if ! eval "$MANIFEST_CMD"; then
             echo "Failed to create manifest for $MANIFEST_TAG"
             exit 1
@@ -325,11 +327,11 @@ jobs:
           for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
             ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
             ANNOTATION=$(echo "$ARCH_ANNOTATIONS" | jq -r ".[\"$arch\"]")
-            
+
             OS=$(echo "$ANNOTATION" | jq -r '.os')
             ARCH_NAME=$(echo "$ANNOTATION" | jq -r '.arch')
             VARIANT=$(echo "$ANNOTATION" | jq -r '.variant // empty')
-            
+
             if [[ -n "$VARIANT" ]]; then
               docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os "$OS" --arch "$ARCH_NAME" --variant "$VARIANT"
             else
@@ -346,7 +348,7 @@ jobs:
         set -x
         FIRST_TAG=$(echo '${{ steps.read-original-tags.outputs.tags }}' | jq -r '.[0]')
         MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
-        
+
         MANIFEST_INFO=$(docker manifest inspect "$MANIFEST_TAG")
         ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
         EXPECTED_ARCHS=$(echo "$ARCHITECTURES" | jq 'length')
@@ -362,7 +364,7 @@ jobs:
   summary:
     name: "📊 Build Summary"
     needs: [prepare-matrix, build-images, create-manifests]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: always()
 
     steps:
@@ -391,12 +393,12 @@ jobs:
         ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
         ARCH_RUNNERS='${{ env.ARCH_RUNNERS }}'
         ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
-        
+
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
 
         ### Architecture Support & Testing
         EOF
-        
+
         for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
           runner=$(echo "$ARCH_RUNNERS" | jq -r ".[\"$arch\"]")
           platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
@@ -407,7 +409,7 @@ jobs:
 
         ### Images Built
         EOF
-        
+
         IMAGE_DIRS='${{ needs.prepare-matrix.outputs.image_dirs }}'
         for image_dir in $(echo "$IMAGE_DIRS" | jq -r '.[]'); do
           echo "- $image_dir" >> $GITHUB_STEP_SUMMARY
