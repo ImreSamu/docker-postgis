@@ -32,9 +32,6 @@ env:
   # Define target branch for automated builds - easily configurable for testing
   TARGET_BRANCH: 'manifest'  # Change to 'master' for production, 'manifest' for testing
   
-  # Define image naming patterns centrally - improves maintainability
-  IMAGE_TAG_PATTERN: '${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}'
-  ARCH_TAG_PATTERN: '${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-{ARCH}'
   
   # Define supported architectures centrally - currently active: amd64, arm64
   # To add more architectures, add them to this array and configure mappings below
@@ -104,6 +101,7 @@ jobs:
           echo "should_push=false" >> $GITHUB_OUTPUT
         fi
         echo "Push condition result: $(cat $GITHUB_OUTPUT | grep should_push)"
+    
     - name: Generate build matrix
       id: generate-matrix
       run: |
@@ -204,8 +202,7 @@ jobs:
         DOCKER_TAGS=""
         
         for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-          ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${{ matrix.arch_variant }}/")
-          FULL_TAG="${ARCH_TAG_BASE}:${tag}"
+          FULL_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
           [[ -z "$DOCKER_TAGS" ]] && DOCKER_TAGS="$FULL_TAG" || DOCKER_TAGS="$DOCKER_TAGS,$FULL_TAG"
         done
 
@@ -236,8 +233,7 @@ jobs:
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
-        ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${{ matrix.arch_variant }}/")
-        TEST_IMAGE="${ARCH_TAG_BASE}:${FIRST_TAG}"
+        TEST_IMAGE="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${FIRST_TAG}"
 
         echo "Testing natively for ${{ matrix.target }}"
 
@@ -297,14 +293,13 @@ jobs:
         ARCH_ANNOTATIONS='${{ env.ARCH_ANNOTATIONS }}'
 
         for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-          MANIFEST_TAG="${{ env.IMAGE_TAG_PATTERN }}:${tag}"
+          MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${tag}"
           
           docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
 
           MANIFEST_CMD="docker manifest create --amend $MANIFEST_TAG"
           for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-            ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${arch}/")
-            ARCH_TAG="${ARCH_TAG_BASE}:${tag}"
+            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
             MANIFEST_CMD="$MANIFEST_CMD $ARCH_TAG"
           done
           
@@ -315,8 +310,7 @@ jobs:
 
           # Annotate each architecture with proper platform metadata
           for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-            ARCH_TAG_BASE=$(echo "${{ env.ARCH_TAG_PATTERN }}" | sed "s/{ARCH}/${arch}/")
-            ARCH_TAG="${ARCH_TAG_BASE}:${tag}"
+            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
             ANNOTATION=$(echo "$ARCH_ANNOTATIONS" | jq -r ".[\"$arch\"]")
             
             OS=$(echo "$ANNOTATION" | jq -r '.os')
@@ -338,7 +332,7 @@ jobs:
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-original-tags.outputs.tags }}' | jq -r '.[0]')
-        MANIFEST_TAG="${{ env.IMAGE_TAG_PATTERN }}:${FIRST_TAG}"
+        MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
         
         MANIFEST_INFO=$(docker manifest inspect "$MANIFEST_TAG")
         ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
@@ -411,6 +405,6 @@ jobs:
         ### Registry Configuration
         EOF
 
-        echo "- Registry: ${{ env.IMAGE_TAG_PATTERN }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Registry: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
         echo "- Push Images: ${{ needs.prepare-matrix.outputs.should_push == 'true' && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
         echo "- Target Branch: ${{ env.TARGET_BRANCH }}" >> $GITHUB_STEP_SUMMARY
