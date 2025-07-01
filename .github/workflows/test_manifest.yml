@@ -460,48 +460,7 @@ jobs:
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
         ## Multi-Architecture Docker Build Summary
-
-        ### Build Results
         EOF
-
-        if [[ "${{ needs.build-images.result }}" == "success" ]]; then
-          echo "- Individual Architecture Builds: SUCCESS" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "- Individual Architecture Builds: FAILED" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        if [[ "${{ needs.create-manifests.result }}" == "success" ]]; then
-          echo "- Multi-Architecture Manifests: SUCCESS" >> $GITHUB_STEP_SUMMARY
-        elif [[ "${{ needs.create-manifests.result }}" == "skipped" ]]; then
-          echo "- Multi-Architecture Manifests: SKIPPED" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "- Multi-Architecture Manifests: FAILED" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
-        ARCH_RUNNERS='${{ env.ARCH_RUNNERS }}'
-        ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
-
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-
-        ### Architecture Support & Testing
-        EOF
-
-        for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-          runner=$(echo "$ARCH_RUNNERS" | jq -r ".[\"$arch\"]")
-          platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
-          echo "- $platform: $runner (native testing)" >> $GITHUB_STEP_SUMMARY
-        done
-
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-
-        ### Images Built
-        EOF
-
-        IMAGE_DIRS='${{ needs.prepare-matrix.outputs.image_dirs }}'
-        for image_dir in $(echo "$IMAGE_DIRS" | jq -r '.[]'); do
-          echo "- $image_dir" >> $GITHUB_STEP_SUMMARY
-        done
 
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
 
@@ -554,13 +513,11 @@ jobs:
           done
         done
 
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-
-        ### Detailed Job Log Analysis
-
-        | Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |
-        |-----|-----------------|--------------|--------|----------|-------------|-------------|
-        EOF
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Detailed Job Log Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|-----------------|--------------|--------|----------|-------------|-------------|" >> $GITHUB_STEP_SUMMARY
 
     - name: Analyze complete job results
       if: always()
@@ -568,6 +525,9 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         echo "Analyzing complete job logs for detailed error and warning counts..."
+        
+        # Ensure proper table formatting by starting the table in the script
+        echo "" >> $GITHUB_STEP_SUMMARY
         
         # Get job details for this workflow run
         JOBS_JSON=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[]')
@@ -622,23 +582,31 @@ jobs:
             TEST_STATUS="🔍❓ Unknown"
             
             if [[ "$JOB_LOG" != "Log unavailable" ]]; then
-              # Count various error patterns
-              ERROR_COUNT=$(echo "$JOB_LOG" | grep -ciE "(error:|failed|ERROR|FAILED|Exit code [1-9]|returned non-zero|Build failed)" || echo "0")
+              # Count critical error patterns (excluding compiler flags, echo statements, and other false positives)  
+              ERROR_COUNT=$(echo "$JOB_LOG" | grep -vE "(\-Werror|\-Wall|\-Wno\-|gcc.*\-W|echo.*ERROR|RUN set.*ERROR)" | grep -ciE "(FATAL|CRITICAL|make:.*Error|ERROR.*failed|FAILED.*error|Build failed|compilation.*failed|configure.*failed|Connection.*failed|server.*terminated abnormally)" || echo "0")
               
-              # Count warning patterns  
-              WARNING_COUNT=$(echo "$JOB_LOG" | grep -ciE "(warning:|WARN|WARNING|deprecated)" || echo "0")
+              # Count warning patterns (excluding documentation/build tools and informational messages)
+              WARNING_COUNT=$(echo "$JOB_LOG" | grep -vE "(hint:|initdb:.*warning.*trust|configure:.*WARNING.*not installed|configure:.*WARNING.*cannot be built|configure:.*WARNING.*stylesheets)" | grep -ciE "(WARNING|WARN(?!ING.*disabled)|deprecated|caution)" || echo "0")
               
               # Determine test result based on log content and job conclusion
               if [[ "$JOB_CONCLUSION" == "success" ]]; then
-                if echo "$JOB_LOG" | grep -qi "regression.*pass\|All tests passed\|CHECK passed"; then
-                  TEST_STATUS="🔍✅ Tests Passed"
-                elif echo "$JOB_LOG" | grep -qi "REGRESSION_TESTS_FAILED_EXIT_CODE"; then
+                # Check for regression test failure patterns first
+                if echo "$JOB_LOG" | grep -qi "REGRESSION_TESTS_FAILED_EXIT_CODE"; then
                   TEST_STATUS="🔍⚠️ Tests Failed (Non-blocking)"
+                elif echo "$JOB_LOG" | grep -qi "make:.*Error.*check-regress\|psql.*error.*connection.*lost\|server.*terminated abnormally"; then
+                  TEST_STATUS="🔍⚠️ Tests Failed (Non-blocking)"
+                elif echo "$JOB_LOG" | grep -qi "regression.*pass\|All tests passed\|CHECK passed\|Regression test completed.*mode.*non-blocking"; then
+                  # Check if it's a no-jit test mode
+                  if echo "$JOB_LOG" | grep -qi "test_nojit.*mode\|JIT disabled"; then
+                    TEST_STATUS="🔍🐢✅ Tests Passed (No-JIT)"
+                  else
+                    TEST_STATUS="🔍✅ Tests Passed"
+                  fi
                 else
                   TEST_STATUS="🔍✅ Build Success"
                 fi
               elif [[ "$JOB_CONCLUSION" == "failure" ]]; then
-                if echo "$JOB_LOG" | grep -qi "regression.*fail\|test.*fail"; then
+                if echo "$JOB_LOG" | grep -qi "regression.*fail\|test.*fail\|REGRESSION_TESTS_FAILED_EXIT_CODE"; then
                   TEST_STATUS="🔍❌ Tests Error"
                 else
                   TEST_STATUS="🔍❌ Build Error"

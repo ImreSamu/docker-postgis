@@ -144,7 +144,12 @@ RUN set -eux \
     && mkdir /tempdb \
     && chown -R postgres:postgres /tempdb \
     && su postgres -c 'pg_ctl -D /tempdb init' \
-    && su postgres -c 'pg_ctl -D /tempdb -c -l /tmp/logfile -o '-F' start ' \
+    && if [ "${PGIS1_REGRESSION_MODE}" = "test_nojit" ]; then \
+        echo "Starting PostgreSQL server with JIT disabled for test_nojit mode"; \
+        su postgres -c 'pg_ctl -D /tempdb -c -l /tmp/logfile -o "-F --jit=off" start '; \
+    else \
+        su postgres -c 'pg_ctl -D /tempdb -c -l /tmp/logfile -o '-F' start '; \
+    fi \
     && cd regress \
     && echo "Regression testing mode: ${PGIS1_REGRESSION_MODE}" \
     && if [ "${PGIS1_REGRESSION_MODE}" = "require" ]; then \

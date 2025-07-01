@@ -251,8 +251,8 @@ The workflow now includes comprehensive job log analysis that examines complete 
 
 | Feature | Description | Implementation |
 |---------|-------------|----------------|
-| **Error Counting** | Counts all error patterns in complete job logs | Pattern matching for: `error:`, `failed`, `ERROR`, `FAILED`, `Exit code [1-9]`, `returned non-zero`, `Build failed` |
-| **Warning Counting** | Counts all warning patterns in complete job logs | Pattern matching for: `warning:`, `WARN`, `WARNING`, `deprecated` |
+| **Error Counting** | Counts critical error patterns in complete job logs (excluding false positives) | Pattern matching for: `FATAL`, `CRITICAL`, `make: *** Error`, `ERROR.*failed`, `FAILED.*error`, `Build failed`, `compilation.*failed`, `configure.*failed`, `Connection.*failed`, `server.*terminated abnormally`. Excludes: gcc compiler flags (`-Werror`, `-Wall`, `-Wno-*`), echo statements (`echo.*ERROR`), Docker RUN commands (`RUN set.*ERROR`) |
+| **Warning Counting** | Counts critical warning patterns in complete job logs (excluding documentation/build tool warnings) | Pattern matching for: `WARNING`, `WARN` (excluding disabled warnings), `deprecated`, `caution`. Excludes: git hints (`hint:`), initdb authentication warnings (`initdb:.*warning.*trust`), documentation tool warnings (`configure:.*WARNING.*not installed`, `configure:.*WARNING.*cannot be built`, `configure:.*WARNING.*stylesheets`) |
 | **Test Result Analysis** | Determines specific test outcomes from log content | Analyzes regression test patterns and job conclusions |
 | **Direct Log Access** | Provides clickable links to complete job logs | GitHub Actions job log URLs for detailed debugging |
 
@@ -262,8 +262,9 @@ The detailed analysis provides more granular test result status:
 
 | Status | Emoji | Meaning | Detection Logic |
 |--------|-------|---------|--------------| 
-| `🔍✅ Tests Passed` | 🔍✅ | Tests completed successfully | Job success + regression test pass patterns |
-| `🔍⚠️ Tests Failed (Non-blocking)` | 🔍⚠️ | Tests failed but build continued | Job success + `REGRESSION_TESTS_FAILED_EXIT_CODE` pattern |
+| `🔍✅ Tests Passed` | 🔍✅ | Tests completed successfully | Job success + regression test pass patterns or completion messages |
+| `🔍🐢✅ Tests Passed (No-JIT)` | 🔍🐢✅ | No-JIT tests completed successfully | Job success + test_nojit mode patterns + JIT disabled |
+| `🔍⚠️ Tests Failed (Non-blocking)` | 🔍⚠️ | Tests failed but build continued | Job success + `REGRESSION_TESTS_FAILED_EXIT_CODE`, `make: *** Error`, `psql: error: connection lost`, or `server terminated abnormally` patterns |
 | `🔍❌ Tests Error` | 🔍❌ | Test execution errors | Job failure + test/regression failure patterns |
 | `🔍❌ Build Error` | 🔍❌ | Build compilation/setup errors | Job failure + general error patterns |
 | `🔍✅ Build Success` | 🔍✅ | Build successful, tests not detected | Job success without specific test patterns |
@@ -279,20 +280,37 @@ The summary includes a comprehensive analysis table:
 
 | Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |
 |-----|-----------------|--------------|--------|----------|-------------|-------------|
-| 💻amd64\|🔒17-3.5/alpine3.22⚡ | 17-3.5/alpine3.22 | amd64 | 0 | 5 | 🔍✅ Tests Passed | [View Logs](link) |
-| 💪arm64\|🔒18-3.5/bookworm⚡ | 18-3.5/bookworm | arm64 | 0 | 3 | 🔍✅ Tests Passed | [View Logs](link) |
-| 🦾armv6\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | armv6 | 2 | 12 | 🔍⚠️ Tests Failed (Non-blocking) | [View Logs](link) |
-| 🧩riscv64\|🔍🐢17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | riscv64 | 1 | 8 | 🔍✅ Build Success | [View Logs](link) |
+| 💻amd64\|🔒17-3.5/alpine3.22⚡ | 17-3.5/alpine3.22 | amd64 | 110 | 30 | 🔍✅ Tests Passed | [View Logs](link) |
+| 💪arm64\|🔒18-3.5/bookworm⚡ | 18-3.5/bookworm | arm64 | 110 | 28 | 🔍✅ Tests Passed | [View Logs](link) |
+| 🦾armv6\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | armv6 | 113 | 30 | 🔍⚠️ Tests Failed (Non-blocking) | [View Logs](link) |
+| 🧩riscv64\|🔍🐢17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | riscv64 | 114 | 33 | 🔍🐢✅ Tests Passed (No-JIT) | [View Logs](link) |
 ```
+
+#### Enhanced Test Failure Detection
+
+The log analysis now includes sophisticated pattern matching to accurately detect test failures:
+
+**Test Failure Patterns Detected:**
+- `REGRESSION_TESTS_FAILED_EXIT_CODE_*` - Direct regression test failure marker
+- `make: *** Error * check-regress` - Make target failure during regression tests
+- `psql: error: connection to server was lost` - Database connection failures during tests
+- `server terminated abnormally` - PostgreSQL server crashes during testing
+
+**Test Success Patterns Detected:**
+- `Regression test completed * mode * non-blocking` - Successful completion messages
+- `test_nojit * mode` or `JIT disabled` - No-JIT test mode identification
+- General build success without test failure markers
 
 #### Benefits of Detailed Analysis
 
 - **Complete Coverage**: Analyzes entire job logs, not just regression test outputs
+- **Accurate Test Detection**: Sophisticated pattern matching for precise test failure identification
 - **Error Quantification**: Provides exact counts of errors and warnings for debugging
 - **Granular Status**: Distinguishes between test failures, build errors, and success states  
 - **Direct Access**: Clickable links to complete job logs for detailed investigation
 - **Historical Tracking**: Persistent analysis results in GitHub Actions summaries
 - **Debugging Aid**: Quickly identify which jobs need attention and why
+- **Multi-Directory Support**: Handles multiple image directories with proper separation
 
 ### Example Summary Table
 
