@@ -157,10 +157,27 @@ RUN set -eux \
         su postgres -c 'pg_ctl -D /tempdb -c -l /tmp/logfile -o '-F' start '; \
         zstd -3 --long --rm /tmp/regression_test.log -o /_pgis_regression_test.log.zst; \
         echo "Regression test completed (test mode - non-blocking), log saved compressed with zstd --long"; \
+    elif [ "${PGIS1_REGRESSION_MODE}" = "test_nojit" ]; then \
+        echo "Running regression tests in TEST_NOJIT mode - tests with JIT disabled"; \
+        { make -j$(nproc) check RUNTESTFLAGS="--extension --verbose" PGUSER=postgres 2>&1 || echo "REGRESSION_TESTS_FAILED_EXIT_CODE_$?"; } | tee /tmp/regression_test.log; \
+        echo "Stopping potentially damaged server after regression tests"; \
+        su postgres -c 'pg_ctl -D /tempdb --mode=immediate stop' || true; \
+        echo "Cleaning and restarting fresh server with JIT disabled for extension testing"; \
+        rm -rf /tempdb/*; \
+        chown -R postgres:postgres /tempdb; \
+        su postgres -c 'pg_ctl -D /tempdb init'; \
+        su postgres -c 'pg_ctl -D /tempdb -c -l /tmp/logfile -o "-F --jit=off" start '; \
+        su postgres -c 'psql -c "SHOW JIT;"'; \
+        echo "Configuring PostgreSQL default settings for JIT-incompatible architecture"; \
+        echo "" >> /usr/local/share/postgresql/postgresql.conf.sample; \
+        echo "# JIT disabled for architecture compatibility (added by docker-postgis)" >> /usr/local/share/postgresql/postgresql.conf.sample; \
+        echo "jit = off" >> /usr/local/share/postgresql/postgresql.conf.sample; \
+        zstd -3 --long --rm /tmp/regression_test.log -o /_pgis_regression_test.log.zst; \
+        echo "Regression test completed (test_nojit mode - non-blocking), log saved compressed with zstd --long"; \
     elif [ "${PGIS1_REGRESSION_MODE}" = "skip" ]; then \
         echo "Regression tests SKIPPED (mode: skip)"; \
     else \
-        echo "ERROR: Invalid PGIS1_REGRESSION_MODE: ${PGIS1_REGRESSION_MODE}. Valid values: skip, test, require"; \
+        echo "ERROR: Invalid PGIS1_REGRESSION_MODE: ${PGIS1_REGRESSION_MODE}. Valid values: skip, test, test_nojit, require"; \
         exit 1; \
     fi \
     \

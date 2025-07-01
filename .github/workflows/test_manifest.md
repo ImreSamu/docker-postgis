@@ -14,16 +14,17 @@ The workflow implements a sophisticated multi-architecture Docker build system t
 
 The workflow currently supports these architectures with their corresponding emojis for UI clarity and regression testing modes:
 
-| Architecture | Docker Platform | Runner | Emoji | Regression Mode | Use Case |
-|--------------|-----------------|--------|-------|-----------------|----------|
-| amd64        | linux/amd64     | ubuntu-24.04 | 💻 | require | Intel/AMD 64-bit (Production) |
-| arm64        | linux/arm64     | ubuntu-24.04-arm | 💪 | require | Apple Silicon, AWS Graviton (Production) |
-| armv6        | linux/arm/v6    | ubuntu-24.04-arm | 🦾 | test | Raspberry Pi Zero (Experimental) |
-| armv7        | linux/arm/v7    | ubuntu-24.04-arm | 🤖 | test | Raspberry Pi 2/3/4 (Experimental) |
-| 386          | linux/386       | ubuntu-24.04 | 🖥️ | test | Legacy 32-bit Intel (Experimental) |
-| ppc64le      | linux/ppc64le   | ubuntu-24.04 | ⚡ | test | IBM POWER systems (Experimental) |
-| riscv64      | linux/riscv64   | ubuntu-24.04 | 🧩 | test | RISC-V 64-bit (Experimental) |
-| s390x        | linux/s390x     | ubuntu-24.04 | 🏢 | test | IBM mainframes (Experimental) |
+| Architecture | Docker Platform | Runner | Emoji | Regression Mode | Build Type | Use Case |
+|--------------|-----------------|--------|-------|-----------------|------------|----------|
+| amd64        | linux/amd64     | ubuntu-24.04 | 💻 | require | native ⚡ | Intel/AMD 64-bit (Production) |
+| arm64        | linux/arm64     | ubuntu-24.04-arm | 💪 | require | native ⚡ | Apple Silicon, AWS Graviton (Production) |
+| armv6        | linux/arm/v6    | ubuntu-24.04-arm | 🦾 | test | qemu 🔄 | Raspberry Pi Zero (Experimental) |
+| armv7        | linux/arm/v7    | ubuntu-24.04-arm | 🤖 | test | qemu 🔄 | Raspberry Pi 2/3/4 (Experimental) |
+| 386          | linux/386       | ubuntu-24.04 | 🖥️ | test | qemu 🔄 | Legacy 32-bit Intel (Experimental) |
+| mips64le     | linux/mips64le  | ubuntu-24.04 | 🎯 | test_nojit | qemu 🔄 | MIPS 64-bit systems (No-JIT) |
+| ppc64le      | linux/ppc64le   | ubuntu-24.04 | ⚡ | test | qemu 🔄 | IBM POWER systems (Experimental) |
+| riscv64      | linux/riscv64   | ubuntu-24.04 | 🧩 | test_nojit | qemu 🔄 | RISC-V 64-bit (No-JIT) |
+| s390x        | linux/s390x     | ubuntu-24.04 | 🏢 | test_nojit | qemu 🔄 | IBM mainframes (No-JIT) |
 
 ## Configuration
 
@@ -40,7 +41,10 @@ The workflow currently supports these architectures with their corresponding emo
 - `ARCH_RUNNERS`: Maps architectures to GitHub runner types
 - `ARCH_PLATFORMS`: Maps architectures to Docker platform strings
 - `ARCH_EMOJIS`: Maps architectures to emoji icons for UI
-- `ARCH_REGRESSION_MODES`: Maps architectures to regression testing modes (skip/test/require)
+- `ARCH_REGRESSION_MODES`: Maps architectures to regression testing modes (skip/test/test_nojit/require)
+- `REGRESSION_MODE_EMOJIS`: Maps regression modes to emoji representations
+- `BUILD_TYPE_EMOJIS`: Maps build types (native/qemu) to emoji representations  
+- `ARCH_NATIVE_BUILDS`: Maps architectures to build types (native vs qemu)
 - `ARCH_ANNOTATIONS`: Maps architectures to manifest annotation metadata
 
 #### Image Configuration
@@ -55,12 +59,13 @@ To add support for new architectures:
    SUPPORTED_ARCHITECTURES: '["amd64", "arm64", "new_arch"]'
    ```
 
-2. **Configure mappings** in all five mapping objects:
+2. **Configure mappings** in all architecture mapping objects:
    ```yaml
    ARCH_RUNNERS: '{"new_arch": "ubuntu-24.04"}'
    ARCH_PLATFORMS: '{"new_arch": "linux/new_arch"}'
    ARCH_EMOJIS: '{"new_arch": "🔥"}'
    ARCH_REGRESSION_MODES: '{"new_arch": "test"}'
+   ARCH_NATIVE_BUILDS: '{"new_arch": "qemu"}'
    ARCH_ANNOTATIONS: '{"new_arch": {"os": "linux", "arch": "new_arch"}}'
    ```
 
@@ -68,36 +73,75 @@ To add support for new architectures:
 
 ## Regression Testing Modes
 
-The workflow supports three regression testing modes for PostGIS builds:
+The workflow supports four regression testing modes for PostGIS builds:
 
 ### Mode Descriptions
 
-| Mode | Description | Behavior | Log Storage | Use Case |
-|------|-------------|----------|-------------|----------|
-| `skip` | No regression tests | Tests are completely skipped | None | Fast builds, debugging |
-| `test` | Non-blocking tests | Tests run but failures don't fail the build | Compressed with zstd --long | Development, experimental architectures |
-| `require` | Blocking tests | Tests must pass or build fails | None (tests must pass) | Production architectures |
+| Mode | Description | Behavior | JIT Setting | Log Storage | Use Case |
+|------|-------------|----------|-------------|-------------|----------|
+| `skip` | No regression tests | Tests are completely skipped | N/A | None | Fast builds, debugging |
+| `test` | Non-blocking tests | Tests run but failures don't fail the build | Enabled | Compressed with zstd --long | Development, experimental architectures |
+| `test_nojit` | Non-blocking tests without JIT | Tests run with JIT disabled, failures don't fail build | Disabled + Config Modified | Compressed with zstd --long | JIT-incompatible architectures |
+| `require` | Blocking tests | Tests must pass or build fails | Enabled | None (tests must pass) | Production architectures |
+
+### Emoji Representations
+
+| Mode | Emoji | Meaning |
+|------|-------|---------|
+| `skip` | 💨 | Fast/skip |
+| `test` | 🔍 | Investigation/search |
+| `test_nojit` | 🔍🐢 | Investigation + slow (no JIT) |
+| `require` | 🔒 | Locked/required |
+
+### Build Type Indicators
+
+| Type | Emoji | Meaning |
+|------|-------|---------|
+| `native` | ⚡ | Fast/native execution |
+| `qemu` | 🔄 | Emulated/cross-compilation |
 
 ### Architecture-Specific Modes
 
 - **Production Architectures** (`amd64`, `arm64`): Use `require` mode
   - Tests must pass for build to succeed
+  - Native execution with JIT enabled
   - Ensures production image quality
   - No log storage needed (tests pass or build fails)
 
-- **Experimental Architectures** (all others): Use `test` mode  
-  - Tests run to catch issues early
+- **Standard Experimental Architectures** (`armv6`, `armv7`, `386`, `ppc64le`): Use `test` mode  
+  - Tests run to catch issues early with JIT enabled
   - Build continues even if tests fail
   - Regression logs saved compressed for debugging
   - Enables development on new architectures
 
+- **JIT-Incompatible Architectures** (`mips64le`, `riscv64`, `s390x`): Use `test_nojit` mode
+  - Tests run with JIT disabled for compatibility
+  - Build continues even if tests fail
+  - Server restart ensures clean state after potentially failed regression tests
+  - Extension testing performed with JIT disabled
+  - PostgreSQL configuration modified to disable JIT by default for end users
+  - Regression logs saved compressed for debugging
+
 ### Log Management
 
-For `test` mode, regression test logs are:
+For `test` and `test_nojit` modes, regression test logs are:
 - Captured during build execution (visible in build output)
 - Compressed using `zstd -3 --long` for optimal size
 - Stored as `/_pgis_regression_test.log.zst` in the final image
 - Can be extracted with: `zstd -dc /_pgis_regression_test.log.zst`
+
+### Job Naming Convention
+
+The workflow uses a compact naming format that includes all key information:
+
+**Format**: `{arch_emoji}{arch_name}|{regression_emoji}{image_dir}{build_type_emoji}`
+
+**Examples**:
+- `💻amd64|🔒17-3.5/alpine3.22⚡` - Native amd64, required tests
+- `💪arm64|🔒17-3.5/alpine3.22⚡` - Native arm64, required tests  
+- `🦾armv6|🔍17-3.5/alpine3.22🔄` - QEMU armv6, standard test mode
+- `🧩riscv64|🔍🐢17-3.5/alpine3.22🔄` - QEMU riscv64, no-JIT test mode
+- `🎯mips64le|🔍🐢17-3.5/alpine3.22🔄` - QEMU mips64le, no-JIT test mode
 
 ### Template Integration
 
@@ -106,7 +150,31 @@ The regression testing is controlled via Dockerfile template build argument:
 ARG PGIS1_REGRESSION_MODE=require
 ```
 
-This argument is automatically set by the workflow based on the architecture being built.
+This argument is automatically set by the workflow based on the architecture being built. Valid values are:
+- `skip`: No regression tests
+- `test`: Standard regression tests with JIT enabled
+- `test_nojit`: Regression tests with JIT disabled for compatibility, also modifies postgresql.conf.sample to disable JIT by default
+- `require`: Mandatory regression tests (production mode)
+
+## PostgreSQL Configuration
+
+For JIT-incompatible architectures (`test_nojit` mode), the build process automatically modifies the PostgreSQL configuration:
+
+### Configuration Changes
+
+The following settings are appended to `/usr/local/share/postgresql/postgresql.conf.sample`:
+
+```
+# JIT disabled for architecture compatibility (added by docker-postgis)
+jit = off
+```
+
+### Benefits
+
+- **Default Compatibility**: New PostgreSQL instances will have JIT disabled by default
+- **User-Friendly**: No manual configuration required for end users
+- **Documented**: Clear comment explains why JIT is disabled
+- **Persistent**: Setting survives container restarts and data volume mounts
 
 ## Workflow Jobs
 

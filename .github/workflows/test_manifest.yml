@@ -86,23 +86,25 @@ env:
   # Define regression testing mode per architecture
   # Production architectures (amd64, arm64): require - tests must pass
   # Development/experimental architectures: test - tests run but won't fail build
+  # Special architectures: test_nojit - tests with JIT disabled for compatibility
   ARCH_REGRESSION_MODES: '{
     "amd64":    "require",
     "arm64":    "require",
     "armv6":    "test",
     "armv7":    "test",
     "386":      "test",
-    "mips64le": "test",
+    "mips64le": "test_nojit",
     "ppc64le":  "test",
-    "riscv64":  "test",
-    "s390x":    "test"
+    "riscv64":  "test_nojit",
+    "s390x":    "test_nojit"
   }'
 
   # Define regression mode emoji mapping  
   REGRESSION_MODE_EMOJIS: '{
     "skip": "💨",
     "test": "🔍", 
-    "require": "🔒"
+    "require": "🔒",
+    "test_nojit": "🔍🐢"
   }'
 
   # Define build type emoji mapping (native vs QEMU)
@@ -216,7 +218,7 @@ jobs:
         echo "$MATRIX_JSON" | jq '.'
 
   build-images:
-    name: "${{ matrix.arch_emoji }}${{ matrix.arch_variant }}${{ matrix.build_type_emoji }}|${{ matrix.regression_emoji }}${{ matrix.image_dir }}"
+    name: "${{ matrix.arch_emoji }}${{ matrix.arch_variant }}|${{ matrix.regression_emoji }}${{ matrix.image_dir }}${{ matrix.build_type_emoji }}"
     needs: prepare-matrix
     runs-on: ${{ matrix.runner }}
     continue-on-error: false
