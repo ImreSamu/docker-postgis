@@ -176,6 +176,56 @@ jit = off
 - **Documented**: Clear comment explains why JIT is disabled
 - **Persistent**: Setting survives container restarts and data volume mounts
 
+## Build Summary Report
+
+The workflow generates a comprehensive summary report in the GitHub Actions interface, including a detailed regression test results table.
+
+### Regression Test Results Table
+
+The summary includes a table showing the status of regression tests for each architecture and image combination:
+
+| Column | Description | Example Values |
+|--------|-------------|----------------|
+| **Image** | Directory being built | `17-3.5/alpine3.22` |
+| **Architecture** | Target architecture with emoji | `💻 amd64`, `🧩 riscv64` |
+| **Test Mode** | Regression testing mode with emoji | `🔒 require`, `🔍🐢 test_nojit` |
+| **Build Type** | Native vs emulated execution | `⚡ native`, `🔄 qemu` |
+| **Result** | Test outcome status | See status table below |
+
+### Result Status Values
+
+| Status | Emoji | Meaning | When Used |
+|--------|-------|---------|-----------|
+| `⏭️ Skipped` | ⏭️ | Tests were skipped | `skip` mode |
+| `✅ Passed (Required)` | ✅ | Required tests passed | `require` mode success |
+| `🔍 Completed (Non-blocking)` | 🔍 | Standard tests completed | `test` mode (any outcome) |
+| `🔍🐢 Completed (No-JIT, Non-blocking)` | 🔍🐢 | No-JIT tests completed | `test_nojit` mode (any outcome) |
+| `❌ Failed (Build Stopped)` | ❌ | Required tests failed | `require` mode failure |
+| `⚠️ Build Failed` | ⚠️ | Build error occurred | Non-require mode failures |
+| `⏸️ {status}` | ⏸️ | Other status | Cancelled, skipped, etc. |
+
+### Example Summary Table
+
+```markdown
+### Regression Test Results
+
+| Image | Architecture | Test Mode | Build Type | Result |
+|-------|--------------|-----------|------------|--------|
+| 17-3.5/alpine3.22 | 💻 amd64 | 🔒 require | ⚡ native | ✅ Passed (Required) |
+| 17-3.5/alpine3.22 | 💪 arm64 | 🔒 require | ⚡ native | ✅ Passed (Required) |
+| 17-3.5/alpine3.22 | 🦾 armv6 | 🔍 test | 🔄 qemu | 🔍 Completed (Non-blocking) |
+| 17-3.5/alpine3.22 | 🧩 riscv64 | 🔍🐢 test_nojit | 🔄 qemu | 🔍🐢 Completed (No-JIT, Non-blocking) |
+| 17-3.5/alpine3.22 | 🎯 mips64le | 🔍🐢 test_nojit | 🔄 qemu | 🔍🐢 Completed (No-JIT, Non-blocking) |
+```
+
+### Benefits
+
+- **Quick Overview**: See all test results at a glance
+- **Visual Clarity**: Emoji-based status indicators
+- **Debugging Aid**: Easily identify which architectures need attention
+- **Historical Record**: Summary persists in GitHub Actions logs
+- **Comprehensive Status**: Shows both test mode and actual outcomes
+
 ## Workflow Jobs
 
 ### 🌍 Prepare Matrix
@@ -208,12 +258,14 @@ jit = off
   - Only runs when images should be pushed
 
 ### 📊 Build Summary
-- **Purpose**: Provides comprehensive build results
+- **Purpose**: Provides comprehensive build results and regression test overview
 - **Features**:
   - Success/failure status for each phase
+  - Detailed regression test results table
   - Architecture support summary
   - Registry configuration details
   - Always runs regardless of job failures
+- **Regression Test Results Table**: Shows detailed status for each architecture and image combination
 
 ## Branch Configuration
 

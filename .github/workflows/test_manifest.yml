@@ -483,6 +483,57 @@ jobs:
 
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
 
+        ### Regression Test Results
+
+        | Image | Architecture | Test Mode | Build Type | Result |
+        |-------|--------------|-----------|------------|--------|
+        EOF
+        
+        IMAGES='${{ needs.prepare-matrix.outputs.image_dirs }}'
+        ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
+        ARCH_REGRESSION_MODES='${{ env.ARCH_REGRESSION_MODES }}'
+        REGRESSION_MODE_EMOJIS='${{ env.REGRESSION_MODE_EMOJIS }}'
+        ARCH_EMOJIS='${{ env.ARCH_EMOJIS }}'
+        BUILD_TYPE_EMOJIS='${{ env.BUILD_TYPE_EMOJIS }}'
+        ARCH_NATIVE_BUILDS='${{ env.ARCH_NATIVE_BUILDS }}'
+        
+        for image_dir in $(echo "$IMAGES" | jq -r '.[]'); do
+          for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
+            regression_mode=$(echo "$ARCH_REGRESSION_MODES" | jq -r ".[\"$arch\"]")
+            regression_emoji=$(echo "$REGRESSION_MODE_EMOJIS" | jq -r ".[\"$regression_mode\"]")
+            arch_emoji=$(echo "$ARCH_EMOJIS" | jq -r ".[\"$arch\"]")
+            build_type=$(echo "$ARCH_NATIVE_BUILDS" | jq -r ".[\"$arch\"]")
+            build_type_emoji=$(echo "$BUILD_TYPE_EMOJIS" | jq -r ".[\"$build_type\"]")
+            
+            # Determine build result based on job outcome
+            if [[ "${{ needs.build-images.result }}" == "success" ]]; then
+              if [[ "$regression_mode" == "skip" ]]; then
+                result_status="⏭️ Skipped"
+              elif [[ "$regression_mode" == "require" ]]; then
+                result_status="✅ Passed (Required)"
+              elif [[ "$regression_mode" == "test" ]]; then
+                result_status="🔍 Completed (Non-blocking)"
+              elif [[ "$regression_mode" == "test_nojit" ]]; then
+                result_status="🔍🐢 Completed (No-JIT, Non-blocking)"
+              else
+                result_status="❓ Unknown"
+              fi
+            elif [[ "${{ needs.build-images.result }}" == "failure" ]]; then
+              if [[ "$regression_mode" == "require" ]]; then
+                result_status="❌ Failed (Build Stopped)"
+              else
+                result_status="⚠️ Build Failed"
+              fi
+            else
+              result_status="⏸️ ${{ needs.build-images.result }}"
+            fi
+            
+            echo "| $image_dir | $arch_emoji $arch | $regression_emoji $regression_mode | $build_type_emoji $build_type | $result_status |" >> $GITHUB_STEP_SUMMARY
+          done
+        done
+
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+
         ### Registry Configuration
         EOF
 
