@@ -502,4 +502,56 @@ The workflow supports configurable branch targeting:
 - **Notification System**: Advanced build status notifications
 - **Metrics Collection**: Build performance and success rate tracking
 
-This workflow represents a production-ready multi-architecture Docker build system with excellent maintainability and extensibility.
+## Reusable Workflow Template System
+
+### Template-Based Architecture
+
+Starting with the latest implementation, the workflow system has been refactored into a reusable template system for better maintainability and flexibility:
+
+#### Core Template
+
+- **`build-manifest-template.yml`**: Reusable workflow template containing all build logic
+- **Input Parameters**: Configurable workflow name, architectures, image directories, registry settings
+- **Shared Functionality**: All build, test, manifest creation, and log analysis logic
+
+#### Variant-Specific Workflows
+
+- **`manifest-alpine.yml`**: Alpine-based builds with full architecture support
+  - Architectures: `["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]`
+  - Image Directories: `["17-3.5/alpine3.22", "18-3.6/alpine3.22"]`
+
+- **`manifest-debian.yml`**: Debian-based builds with limited architecture support
+  - Architectures: `["amd64", "arm64"]` (production architectures only)
+  - Image Directories: `["17-3.5/bookworm", "18-3.5/bookworm"]`
+
+#### Benefits of Template System
+
+1. **Code Reuse**: Single source of truth for build logic
+2. **Consistent Behavior**: All variants use identical build processes
+3. **Easy Maintenance**: Updates to core logic apply to all variants
+4. **Flexible Configuration**: Each variant can have different architectures and directories
+5. **Scalable**: Easy to add new variants (Ubuntu, Rocky Linux, etc.)
+
+#### Usage Pattern
+
+```yaml
+jobs:
+  build-variant:
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Alpine"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["17-3.5/alpine3.22"]'
+      target_branch: "manifest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+```
+
+#### Migration Path
+
+- **Current**: `test_manifest.yml` remains as the original comprehensive workflow
+- **Future**: New variants use the template system for consistency
+- **Flexibility**: Can gradually migrate existing workflows to use templates
+
+This template-based approach provides a production-ready multi-architecture Docker build system with excellent maintainability, extensibility, and configuration flexibility.
