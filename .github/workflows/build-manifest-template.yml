@@ -288,6 +288,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up QEMU for cross-platform builds
+      if: ${{ matrix.build_type == 'qemu' }}
       uses: docker/setup-qemu-action@v3
       with:
         platforms: all
@@ -297,6 +298,7 @@ jobs:
       with:
         install: true
         driver-opts: network=host
+        platforms: ${{ matrix.target }}
 
     - name: Install build dependencies
       run: |
@@ -491,159 +493,9 @@ jobs:
     name: "📊 Build Summary"
     needs: [prepare-matrix, build-images, create-manifests]
     runs-on: ubuntu-24.04
-    if: always()
+    if: false  # Disabled - will be re-enabled later with improvements
 
     steps:
-    - name: Generate summary
-      env:
-        GH_TOKEN: ${{ github.token }}
+    - name: Summary disabled
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        ## Multi-Architecture Docker Build Summary (${{ inputs.workflow_name }})
-        EOF
-
-        echo "### Build Results & Log Analysis" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Image Directory | Architecture | Test Mode | Build Type | Errors | Warnings | Result | Log Details |" >> $GITHUB_STEP_SUMMARY
-        echo "|-----------------|--------------|-----------|------------|--------|----------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
-
-
-    - name: Analyze complete job results
-      if: always()
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        echo "Analyzing complete job logs for detailed error and warning counts..."
-        
-        # Job log analysis data will be written to the combined table above
-        
-        # Get job details for this workflow run
-        JOBS_JSON=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[]')
-        
-        # Process each build job
-        echo "$JOBS_JSON" | jq -c 'select(.name | contains("build-images") or test("💻|💪|🦾|🤖|🖥️|🎯|⚡|🧩|🏢"))' | while read -r job; do
-          JOB_ID=$(echo "$job" | jq -r '.id')
-          JOB_NAME=$(echo "$job" | jq -r '.name')
-          JOB_STATUS=$(echo "$job" | jq -r '.status')
-          JOB_CONCLUSION=$(echo "$job" | jq -r '.conclusion // "in_progress"')
-          
-          # Extract architecture and image directory from job name
-          # Job name format: {arch_emoji}{arch_name}|{regression_emoji}{image_dir}{build_type_emoji}
-          ARCH=""
-          IMAGE_DIR=""
-          
-          if [[ "$JOB_NAME" =~ 💻 ]]; then ARCH="amd64"
-          elif [[ "$JOB_NAME" =~ 💪 ]]; then ARCH="arm64"
-          elif [[ "$JOB_NAME" =~ 🦾 ]]; then ARCH="armv6"
-          elif [[ "$JOB_NAME" =~ 🤖 ]]; then ARCH="armv7"
-          elif [[ "$JOB_NAME" =~ 🖥️ ]]; then ARCH="386"
-          elif [[ "$JOB_NAME" =~ 🎯 ]]; then ARCH="mips64le"
-          elif [[ "$JOB_NAME" =~ ⚡ ]]; then ARCH="ppc64le"
-          elif [[ "$JOB_NAME" =~ 🧩 ]]; then ARCH="riscv64"
-          elif [[ "$JOB_NAME" =~ 🏢 ]]; then ARCH="s390x"
-          else ARCH="unknown"
-          fi
-          
-          # Extract image directory from job name (after | and before final emoji)
-          if [[ "$JOB_NAME" =~ \|[🔒🔍💨🐢]+([^⚡🔄]+)[⚡🔄] ]]; then
-            IMAGE_DIR="${BASH_REMATCH[1]}"
-          elif [[ "$JOB_NAME" =~ \|[🔒🔍💨🐢]+([^⚡🔄]+)$ ]]; then
-            IMAGE_DIR="${BASH_REMATCH[1]}"
-          else
-            # Fallback: try to extract any path-like pattern from job name
-            if [[ "$JOB_NAME" =~ ([0-9]+-[0-9]\.[0-9]/[a-zA-Z0-9\.]+) ]]; then
-              IMAGE_DIR="${BASH_REMATCH[1]}"
-            else
-              IMAGE_DIR="unknown"
-            fi
-          fi
-
-          if [[ "$JOB_STATUS" == "completed" ]]; then
-            echo "Analyzing job $JOB_ID ($ARCH)..."
-            
-            # Get job logs
-            JOB_LOG=$(gh api repos/${{ github.repository }}/actions/jobs/$JOB_ID/logs 2>/dev/null || echo "Log unavailable")
-            
-            # Count errors and warnings in the logs
-            ERROR_COUNT=0
-            WARNING_COUNT=0
-            TEST_STATUS="🔍❓ Unknown"
-            
-            if [[ "$JOB_LOG" != "Log unavailable" ]] && [[ ${#JOB_LOG} -gt 100 ]]; then
-              # Count critical error patterns (excluding compiler flags, echo statements, and other false positives)  
-              ERROR_COUNT=$(echo "$JOB_LOG" | grep -vE "(\-Werror|\-Wall|\-Wno\-|gcc.*\-W|echo.*ERROR|RUN set.*ERROR)" | grep -ciE "(FATAL|CRITICAL|make:.*Error|ERROR.*failed|FAILED.*error|Build failed|compilation.*failed|configure.*failed|Connection.*failed|server.*terminated abnormally)" 2>/dev/null || echo "0")
-              ERROR_COUNT=$(echo "$ERROR_COUNT" | tr -d '\n\r' | xargs)
-              
-              # Count warning patterns (excluding documentation/build tools and informational messages)
-              WARNING_COUNT=$(echo "$JOB_LOG" | grep -vE "(hint:|initdb:.*warning.*trust|configure:.*WARNING.*not installed|configure:.*WARNING.*cannot be built|configure:.*WARNING.*stylesheets)" | grep -ciE "(WARNING|WARN(?!ING.*disabled)|deprecated|caution)" 2>/dev/null || echo "0")
-              WARNING_COUNT=$(echo "$WARNING_COUNT" | tr -d '\n\r' | xargs)
-              
-              # Determine test result based on log content and job conclusion
-              if [[ "$JOB_CONCLUSION" == "success" ]]; then
-                # Check for regression test failure patterns first
-                if echo "$JOB_LOG" | grep -qi "make:.*Error.*check-regress\|psql.*error.*connection.*lost\|server.*terminated abnormally"; then
-                  TEST_STATUS="🔍💥 Tests Crashed (Non-blocking)"
-                elif echo "$JOB_LOG" | grep -qi "REGRESSION_TESTS_FAILED_EXIT_CODE"; then
-                  # Extract the exit code to understand severity
-                  EXIT_CODE=$(echo "$JOB_LOG" | grep -o "REGRESSION_TESTS_FAILED_EXIT_CODE_[0-9]*" | tail -1 | grep -o "[0-9]*$" || echo "unknown")
-                  TEST_STATUS="🔍❌ Tests Failed (Exit: $EXIT_CODE, Non-blocking)"
-                elif echo "$JOB_LOG" | grep -qi "regression.*pass\|All tests passed\|CHECK passed\|Regression test completed.*mode.*non-blocking"; then
-                  # Check if it's a no-jit test mode
-                  if echo "$JOB_LOG" | grep -qi "test_nojit.*mode\|JIT disabled"; then
-                    TEST_STATUS="🔍🐢✅ Tests Passed (No-JIT)"
-                  else
-                    TEST_STATUS="🔍✅ Tests Passed"
-                  fi
-                else
-                  TEST_STATUS="🔍✅ Build Success"
-                fi
-              elif [[ "$JOB_CONCLUSION" == "failure" ]]; then
-                if echo "$JOB_LOG" | grep -qi "regression.*fail\|test.*fail\|REGRESSION_TESTS_FAILED_EXIT_CODE"; then
-                  TEST_STATUS="🔍❌ Tests Error"
-                else
-                  TEST_STATUS="🔍❌ Build Error"
-                fi
-              else
-                TEST_STATUS="🔍⏸️ $JOB_CONCLUSION"
-              fi
-            else
-              # Log unavailable or too short (likely from cache)
-              ERROR_COUNT="N/A"
-              WARNING_COUNT="N/A" 
-              TEST_STATUS="🔍💾 Cache/No Log Analysis"
-            fi
-            
-            # Get test mode and build type for this architecture
-            ARCH_REGRESSION_MODES='${{ env.ARCH_REGRESSION_MODES }}'
-            REGRESSION_MODE_EMOJIS='${{ env.REGRESSION_MODE_EMOJIS }}'
-            ARCH_NATIVE_BUILDS='${{ env.ARCH_NATIVE_BUILDS }}'
-            BUILD_TYPE_EMOJIS='${{ env.BUILD_TYPE_EMOJIS }}'
-            
-            regression_mode=$(echo "$ARCH_REGRESSION_MODES" | jq -r ".[\"$ARCH\"]")
-            regression_emoji=$(echo "$REGRESSION_MODE_EMOJIS" | jq -r ".[\"$regression_mode\"]")
-            build_type=$(echo "$ARCH_NATIVE_BUILDS" | jq -r ".[\"$ARCH\"]")
-            build_type_emoji=$(echo "$BUILD_TYPE_EMOJIS" | jq -r ".[\"$build_type\"]")
-            
-            TEST_MODE="$regression_emoji $regression_mode"
-            BUILD_TYPE_DISPLAY="$build_type_emoji $build_type"
-            
-            # Format log details link
-            LOG_DETAILS="[View Logs](/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/$JOB_ID)"
-            
-            echo "| $IMAGE_DIR | $ARCH | $TEST_MODE | $BUILD_TYPE_DISPLAY | $ERROR_COUNT | $WARNING_COUNT | $TEST_STATUS | $LOG_DETAILS |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| $IMAGE_DIR | $ARCH | - | - | - | - | 🔍⏸️ $JOB_STATUS | - |" >> $GITHUB_STEP_SUMMARY
-          fi
-        done
-
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-
-        ### Registry Configuration
-        EOF
-
-        echo "- Registry: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Push Images: ${{ needs.prepare-matrix.outputs.should_push == 'true' && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Target Branch: ${{ env.TARGET_BRANCH }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Workflow: ${{ inputs.workflow_name }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Architectures: $(echo '${{ env.SUPPORTED_ARCHITECTURES }}' | jq -r 'join(", ")')" >> $GITHUB_STEP_SUMMARY
-        echo "- Image Directories: $(echo '${{ env.IMAGE_DIRECTORIES }}' | jq -r 'join(", ")')" >> $GITHUB_STEP_SUMMARY
+        echo "Summary job disabled - will be improved later"

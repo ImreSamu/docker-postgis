@@ -3,6 +3,8 @@ name: Other | Docker Multi-Arch Build Group
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 3'  # Wednesday 02:00 UTC - Weekly Other builds
   push:
     branches:
       - manifest  # Change to 'master' for production, 'manifest' for testing
@@ -39,13 +41,13 @@ on:
 #multi-arch-paths-end
 
 jobs:
-  # Step 1: Locked (1 directory, 1 architecture)
-  locked:
+  # Step 1: Recent (3 directories)
+  recent:
     uses: ./.github/workflows/build-manifest-template.yml
     with:
-      workflow_name: "Locked"
-      supported_architectures: '["amd64"]'
-      image_directories: '["14-l3.1.9gcp/bookworm"]'
+      workflow_name: "Recent"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["16-recent/bookworm", "17-recent/bookworm", "18-recent/bookworm"]'
       target_branch: "manifest"
       registry: "docker.io"
       repo_name: "imresamu"
@@ -54,9 +56,9 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-  # Step 2: Master (3 directories) - waits for Locked
+  # Step 2: Master (3 directories) - waits for Recent
   master:
-    needs: locked
+    needs: recent
     uses: ./.github/workflows/build-manifest-template.yml
     with:
       workflow_name: "Master"
@@ -70,14 +72,14 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-  # Step 3: Recent (3 directories) - waits for Master
-  recent:
+  # Step 3: Locked (1 directory, 1 architecture) - waits for Master
+  locked:
     needs: master
     uses: ./.github/workflows/build-manifest-template.yml
     with:
-      workflow_name: "Recent"
-      supported_architectures: '["amd64", "arm64"]'
-      image_directories: '["16-recent/bookworm", "17-recent/bookworm", "18-recent/bookworm"]'
+      workflow_name: "Locked"
+      supported_architectures: '["amd64"]'
+      image_directories: '["14-l3.1.9gcp/bookworm"]'
       target_branch: "manifest"
       registry: "docker.io"
       repo_name: "imresamu"

@@ -517,9 +517,10 @@ Starting with the latest implementation, the workflow system has been refactored
 
 #### Group-Based Workflows
 
-The workflow system is organized into 3 logical groups with explicit step dependencies:
+The workflow system is organized into 3 logical groups with explicit step dependencies and weekly scheduling:
 
 ##### **🏔️ `manifest-alpine.yml`** - Alpine Build Group
+- **Schedule**: Monday 02:00 UTC (`cron: '0 2 * * 1'`)
 - **Step 1: Alpine-8Arch** 
   - Architectures: `["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]` (8 architectures)
   - Image Directories: `["13-3.5/alpine3.22", "14-3.5/alpine3.22", "15-3.5/alpine3.22", "16-3.5/alpine3.22", "17-3.5/alpine3.22", "18-3.5/alpine3.22"]`
@@ -528,6 +529,7 @@ The workflow system is organized into 3 logical groups with explicit step depend
   - Image Directories: Alpine 3.22 (3.4, 3.6 versions) + Alpine 3.21 (all 3.3, 3.4, 3.5 versions) - 21 directories total
 
 ##### **📦 `manifest-debian.yml`** - Debian Build Group
+- **Schedule**: Tuesday 02:00 UTC (`cron: '0 2 * * 2'`)
 - **Step 1: Bookworm**
   - Architectures: `["amd64", "arm64"]` (production architectures)
   - Image Directories: `["13-3.5/bookworm", "14-3.5/bookworm", "15-3.5/bookworm", "18-3.5/bookworm"]`
@@ -542,15 +544,16 @@ The workflow system is organized into 3 logical groups with explicit step depend
   - Image Directories: `["13-3.5/bullseye", "14-3.5/bullseye", "15-3.5/bullseye", "16-3.5/bullseye", "17-3.5/bullseye"]`
 
 ##### **🔧 `manifest-other.yml`** - Other Build Group
-- **Step 1: Locked**
-  - Architectures: `["amd64"]` (single architecture)
-  - Image Directories: `["14-l3.1.9gcp/bookworm"]`
-- **Step 2: Master** (`needs: locked`)
-  - Architectures: `["amd64", "arm64"]` (production architectures)
-  - Image Directories: `["16-master/bookworm", "17-master/bookworm", "18-master/bookworm"]`
-- **Step 3: Recent** (`needs: master`)
+- **Schedule**: Wednesday 02:00 UTC (`cron: '0 2 * * 3'`)
+- **Step 1: Recent**
   - Architectures: `["amd64", "arm64"]` (production architectures)
   - Image Directories: `["16-recent/bookworm", "17-recent/bookworm", "18-recent/bookworm"]`
+- **Step 2: Master** (`needs: recent`)
+  - Architectures: `["amd64", "arm64"]` (production architectures)
+  - Image Directories: `["16-master/bookworm", "17-master/bookworm", "18-master/bookworm"]`
+- **Step 3: Locked** (`needs: master`)
+  - Architectures: `["amd64"]` (single architecture)
+  - Image Directories: `["14-l3.1.9gcp/bookworm"]`
 
 
 #### Benefits of Template System

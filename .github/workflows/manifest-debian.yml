@@ -3,6 +3,8 @@ name: Debian | Docker Multi-Arch Build Group
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 2'  # Tuesday 02:00 UTC - Weekly Debian builds
   push:
     branches:
       - manifest  # Change to 'master' for production, 'manifest' for testing
