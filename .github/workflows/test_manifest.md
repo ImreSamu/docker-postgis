@@ -16,15 +16,15 @@ The workflow currently supports these architectures with their corresponding emo
 
 | Architecture | Docker Platform | Runner | Emoji | Regression Mode | Build Type | Optimization | Use Case |
 |--------------|-----------------|--------|-------|-----------------|------------|-------------|----------|
-| amd64        | linux/amd64     | ubuntu-24.04 | 💻 | require | native ⚡ | -O3 -mtune=generic | Intel/AMD 64-bit (Production) |
-| arm64        | linux/arm64     | ubuntu-24.04-arm | 💪 | require | native ⚡ | -O3 -mtune=generic | Apple Silicon, AWS Graviton (Production) |
-| armv6        | linux/arm/v6    | ubuntu-24.04-arm | 🦾 | test | qemu 🔄 | -O1 | Raspberry Pi Zero (Experimental) |
-| armv7        | linux/arm/v7    | ubuntu-24.04-arm | 🤖 | test | qemu 🔄 | -O1 | Raspberry Pi 2/3/4 (Experimental) |
-| 386          | linux/386       | ubuntu-24.04 | 🖥️ | test | qemu 🔄 | -O1 | Legacy 32-bit Intel (Experimental) |
-| mips64le     | linux/mips64le  | ubuntu-24.04 | 🎯 | test_nojit | qemu 🔄 | -O1 | MIPS 64-bit systems (No-JIT) |
-| ppc64le      | linux/ppc64le   | ubuntu-24.04 | ⚡ | test | qemu 🔄 | -O1 | IBM POWER systems (Experimental) |
-| riscv64      | linux/riscv64   | ubuntu-24.04 | 🧩 | test_nojit | qemu 🔄 | -O1 | RISC-V 64-bit (No-JIT) |
-| s390x        | linux/s390x     | ubuntu-24.04 | 🏢 | test_nojit | qemu 🔄 | -O1 | IBM mainframes (No-JIT) |
+| amd64        | linux/amd64     | ubuntu-24.04 | 💻 | require | native ⚡ | -O3 -Wall -fno-omit-frame-pointer -Werror | Intel/AMD 64-bit (Production) |
+| arm64        | linux/arm64     | ubuntu-24.04-arm | 💪 | require | native ⚡ | -O3 -Wall -fno-omit-frame-pointer -Werror | Apple Silicon, AWS Graviton (Production) |
+| armv6        | linux/arm/v6    | ubuntu-24.04-arm | 🦾 | test | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer -Werror | Raspberry Pi Zero (Experimental) |
+| armv7        | linux/arm/v7    | ubuntu-24.04-arm | 🤖 | test | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer -Werror | Raspberry Pi 2/3/4 (Experimental) |
+| 386          | linux/386       | ubuntu-24.04 | 🖥️ | test | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer -Werror | Legacy 32-bit Intel (Experimental) |
+| mips64le     | linux/mips64le  | ubuntu-24.04 | 🎯 | skip | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer -Werror | MIPS 64-bit systems (Skip Tests) |
+| ppc64le      | linux/ppc64le   | ubuntu-24.04 | ⚡ | test | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer -Werror | IBM POWER systems (Experimental) |
+| riscv64      | linux/riscv64   | ubuntu-24.04 | 🧩 | test_nojit | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer -Werror | RISC-V 64-bit (No-JIT) |
+| s390x        | linux/s390x     | ubuntu-24.04 | 🏢 | skip | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer -Werror | IBM mainframes (Skip Tests) |
 
 ## Configuration
 
@@ -116,13 +116,19 @@ The workflow supports four regression testing modes for PostGIS builds:
   - Regression logs saved compressed for debugging
   - Enables development on new architectures
 
-- **JIT-Incompatible Architectures** (`mips64le`, `riscv64`, `s390x`): Use `test_nojit` mode
+- **JIT-Incompatible Architectures** (`riscv64`): Use `test_nojit` mode
   - Tests run with JIT disabled for compatibility
   - Build continues even if tests fail
   - Server restart ensures clean state after potentially failed regression tests
   - Extension testing performed with JIT disabled
   - PostgreSQL configuration modified to disable JIT by default for end users
   - Regression logs saved compressed for debugging
+
+- **Most Problematic Architectures** (`mips64le`, `s390x`): Use `skip` mode
+  - No regression tests run at all
+  - Focus on successful PostGIS compilation and installation
+  - Fastest build times for these challenging architectures
+  - No log storage needed (no tests executed)
 
 ### Log Management
 

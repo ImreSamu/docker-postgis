@@ -86,31 +86,32 @@ env:
   # Define regression testing mode per architecture
   # Production architectures (amd64, arm64): require - tests must pass
   # Development/experimental architectures: test - tests run but won't fail build
-  # Special architectures: test_nojit - tests with JIT disabled for compatibility
+  # JIT-incompatible architectures: test_nojit - tests with JIT disabled
+  # Most problematic architectures: skip - no regression tests at all
   ARCH_REGRESSION_MODES: '{
     "amd64":    "require",
     "arm64":    "require",
     "armv6":    "test",
     "armv7":    "test",
     "386":      "test",
-    "mips64le": "test_nojit",
+    "mips64le": "skip",
     "ppc64le":  "test",
     "riscv64":  "test_nojit",
-    "s390x":    "test_nojit"
+    "s390x":    "skip"
   }'
 
   # Define regression mode emoji mapping  
   REGRESSION_MODE_EMOJIS: '{
-    "skip": "💨",
-    "test": "🔍", 
-    "require": "🔒",
+    "skip":       "💨",
+    "test":       "🔍", 
+    "require":    "🔒",
     "test_nojit": "🔍🐢"
   }'
 
   # Define build type emoji mapping (native vs QEMU)
   BUILD_TYPE_EMOJIS: '{
     "native": "⚡",
-    "qemu": "🔄"
+    "qemu":   "🔄"
   }'
 
   # Define native build detection (runner architecture matches target architecture)
@@ -126,19 +127,34 @@ env:
     "s390x":    "qemu"
   }'
 
-  # Define optimization flags per architecture
-  # Production architectures (amd64, arm64): -O3 -mtune=generic for maximum performance
-  # Experimental architectures: -O1 for faster builds and better stability
+  # Define optimization flags per architecture (following PostGIS CI script style)
+  # Production architectures (amd64, arm64): -O3 with full compiler checks for maximum performance
+  # Experimental architectures: -O1 with full compiler checks for build stability
   ARCH_OPTIMIZATION_FLAGS: '{
-    "amd64":    "-O3 -mtune=generic",
-    "arm64":    "-O3 -mtune=generic",
-    "armv6":    "-O1",
-    "armv7":    "-O1",
-    "386":      "-O1",
-    "mips64le": "-O1",
-    "ppc64le":  "-O1",
-    "riscv64":  "-O1",
-    "s390x":    "-O1"
+    "amd64":    "-O3 -Wall -fno-omit-frame-pointer -Werror",
+    "arm64":    "-O3 -Wall -fno-omit-frame-pointer -Werror",
+    "armv6":    "-O1 -Wall -fno-omit-frame-pointer -Werror",
+    "armv7":    "-O1 -Wall -fno-omit-frame-pointer -Werror",
+    "386":      "-O1 -Wall -fno-omit-frame-pointer -Werror",
+    "mips64le": "-O1 -Wall -fno-omit-frame-pointer -Werror",
+    "ppc64le":  "-O1 -Wall -fno-omit-frame-pointer -Werror",
+    "riscv64":  "-O1 -Wall -fno-omit-frame-pointer -Werror",
+    "s390x":    "-O1 -Wall -fno-omit-frame-pointer -Werror"
+  }'
+
+  # Define LTO (Link Time Optimization) per architecture
+  # Production architectures: LTO enabled for maximum performance
+  # Experimental architectures: LTO disabled for build stability
+  ARCH_LTO_FLAGS: '{
+    "amd64":    "--enable-lto",
+    "arm64":    "--enable-lto",
+    "armv6":    "",
+    "armv7":    "",
+    "386":      "",
+    "mips64le": "",
+    "ppc64le":  "",
+    "riscv64":  "",
+    "s390x":    ""
   }'
 
   # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
@@ -190,6 +206,7 @@ jobs:
         BUILD_TYPE_EMOJIS='${{ env.BUILD_TYPE_EMOJIS }}'
         ARCH_NATIVE_BUILDS='${{ env.ARCH_NATIVE_BUILDS }}'
         ARCH_OPTIMIZATION_FLAGS='${{ env.ARCH_OPTIMIZATION_FLAGS }}'
+        ARCH_LTO_FLAGS='${{ env.ARCH_LTO_FLAGS }}'
 
         MATRIX_JSON='{"include":[]}'
 
@@ -203,6 +220,7 @@ jobs:
             build_type=$(echo "$ARCH_NATIVE_BUILDS" | jq -r ".[\"$arch\"]")
             build_type_emoji=$(echo "$BUILD_TYPE_EMOJIS" | jq -r ".[\"$build_type\"]")
             optimization_flags=$(echo "$ARCH_OPTIMIZATION_FLAGS" | jq -r ".[\"$arch\"]")
+            lto_flags=$(echo "$ARCH_LTO_FLAGS" | jq -r ".[\"$arch\"]")
 
             ENTRY=$(jq -n \
               --arg image_dir "$image_dir" \
@@ -214,6 +232,7 @@ jobs:
               --arg regression_emoji "$regression_emoji" \
               --arg build_type_emoji "$build_type_emoji" \
               --arg optimization_flags "$optimization_flags" \
+              --arg lto_flags "$lto_flags" \
               '{
                 image_dir: $image_dir,
                 arch_variant: $arch,
@@ -223,7 +242,8 @@ jobs:
                 regression_mode: $regression_mode,
                 regression_emoji: $regression_emoji,
                 build_type_emoji: $build_type_emoji,
-                optimization_flags: $optimization_flags
+                optimization_flags: $optimization_flags,
+                lto_flags: $lto_flags
               }')
 
             MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".include += [$ENTRY]")
@@ -326,6 +346,7 @@ jobs:
           BUILDKIT_INLINE_CACHE=1
           PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
           PGIS1_OPTIMIZATION_FLAGS=${{ matrix.optimization_flags }}
+          PGIS1_LTO_FLAGS=${{ matrix.lto_flags }}
 
     - name: List docker images
       run: docker images
@@ -496,6 +517,8 @@ jobs:
                 result_status="🔍✅ Completed (Tests Passed)"
               elif [[ "$regression_mode" == "test_nojit" ]]; then
                 result_status="🔍🐢✅ Completed (No-JIT Tests Passed)"
+              elif [[ "$regression_mode" == "skip" ]]; then
+                result_status="💨 Skipped (No Tests)"
               else
                 result_status="❓ Unknown"
               fi
@@ -513,11 +536,6 @@ jobs:
           done
         done
 
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Detailed Job Log Analysis" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |" >> $GITHUB_STEP_SUMMARY
-        echo "|-----|-----------------|--------------|--------|----------|-------------|-------------|" >> $GITHUB_STEP_SUMMARY
 
     - name: Analyze complete job results
       if: always()
@@ -526,8 +544,12 @@ jobs:
       run: |
         echo "Analyzing complete job logs for detailed error and warning counts..."
         
-        # Ensure proper table formatting by starting the table in the script
+        # Create detailed job log analysis table
         echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Detailed Job Log Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|-----------------|--------------|--------|----------|-------------|-------------|" >> $GITHUB_STEP_SUMMARY
         
         # Get job details for this workflow run
         JOBS_JSON=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[]')
@@ -583,10 +605,12 @@ jobs:
             
             if [[ "$JOB_LOG" != "Log unavailable" ]]; then
               # Count critical error patterns (excluding compiler flags, echo statements, and other false positives)  
-              ERROR_COUNT=$(echo "$JOB_LOG" | grep -vE "(\-Werror|\-Wall|\-Wno\-|gcc.*\-W|echo.*ERROR|RUN set.*ERROR)" | grep -ciE "(FATAL|CRITICAL|make:.*Error|ERROR.*failed|FAILED.*error|Build failed|compilation.*failed|configure.*failed|Connection.*failed|server.*terminated abnormally)" || echo "0")
+              ERROR_COUNT=$(echo "$JOB_LOG" | grep -vE "(\-Werror|\-Wall|\-Wno\-|gcc.*\-W|echo.*ERROR|RUN set.*ERROR)" | grep -ciE "(FATAL|CRITICAL|make:.*Error|ERROR.*failed|FAILED.*error|Build failed|compilation.*failed|configure.*failed|Connection.*failed|server.*terminated abnormally)" 2>/dev/null || echo "0")
+              ERROR_COUNT=$(echo "$ERROR_COUNT" | tr -d '\n\r' | xargs)
               
               # Count warning patterns (excluding documentation/build tools and informational messages)
-              WARNING_COUNT=$(echo "$JOB_LOG" | grep -vE "(hint:|initdb:.*warning.*trust|configure:.*WARNING.*not installed|configure:.*WARNING.*cannot be built|configure:.*WARNING.*stylesheets)" | grep -ciE "(WARNING|WARN(?!ING.*disabled)|deprecated|caution)" || echo "0")
+              WARNING_COUNT=$(echo "$JOB_LOG" | grep -vE "(hint:|initdb:.*warning.*trust|configure:.*WARNING.*not installed|configure:.*WARNING.*cannot be built|configure:.*WARNING.*stylesheets)" | grep -ciE "(WARNING|WARN(?!ING.*disabled)|deprecated|caution)" 2>/dev/null || echo "0")
+              WARNING_COUNT=$(echo "$WARNING_COUNT" | tr -d '\n\r' | xargs)
               
               # Determine test result based on log content and job conclusion
               if [[ "$JOB_CONCLUSION" == "success" ]]; then

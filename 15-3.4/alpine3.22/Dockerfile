@@ -10,12 +10,15 @@ ARG PGIS1_POSTGIS_CHECKOUT=tags/3.4.4
 ARG PGIS1_POSTGIS_CHECKOUT_SHA1=e5ae0d451ef9ad3abc5c1c4ef43f9c149c05fd9d
 
 # usable for forking the image
-ARG PGIS1_OPTIMIZATION_FLAGS=" -O3 -mtune=generic "
+ARG PGIS1_OPTIMIZATION_FLAGS="-O3 -Wall -fno-omit-frame-pointer -Werror"
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
 
 # Regression testing mode: skip, test, require
 ARG PGIS1_REGRESSION_MODE=require
+
+# LTO flags per architecture (empty for experimental architectures)
+ARG PGIS1_LTO_FLAGS="--enable-lto"
 
 FROM ${PGIS1_BASE_IMAGE}
 
@@ -23,6 +26,7 @@ ARG PGIS1_POSTGIS_REPOSITORY
 ARG PGIS1_POSTGIS_CHECKOUT
 ARG PGIS1_POSTGIS_CHECKOUT_SHA1
 ARG PGIS1_OPTIMIZATION_FLAGS
+ARG PGIS1_LTO_FLAGS
 ARG PGIS1_SOURCE_REPO
 ARG PGIS1_MAINTAINER
 ARG PGIS1_BASE_IMAGE
@@ -122,13 +126,12 @@ RUN set -eux \
         exit 1; \
     fi \
     && git log -1 > /_pgis_last_commit.txt \
-    # build PostGIS - with Link Time Optimization (LTO) enabled
+    # build PostGIS - using optimization and LTO flags based on architecture
     && cd /usr/src/postgis \
     && gettextize \
     && ./autogen.sh \
-    && ./configure \
-        --enable-lto \
-        --with-optimization-flags="${PGIS1_OPTIMIZATION_FLAGS}" \
+    && CFLAGS="${PGIS1_OPTIMIZATION_FLAGS}" ./configure \
+        ${PGIS1_LTO_FLAGS} \
         --disable-debug \
     && make -j$(nproc) \
     && make install \
