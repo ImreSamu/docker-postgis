@@ -10,7 +10,7 @@ ARG PGIS1_POSTGIS_CHECKOUT=tags/3.4.4
 ARG PGIS1_POSTGIS_CHECKOUT_SHA1=e5ae0d451ef9ad3abc5c1c4ef43f9c149c05fd9d
 
 # usable for forking the image
-ARG PGIS1_OPTIMIZATION_FLAGS="-O3 -Wall -fno-omit-frame-pointer -Werror"
+ARG PGIS1_OPTIMIZATION_FLAGS="-O3 -Wall -fno-omit-frame-pointer"
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
 

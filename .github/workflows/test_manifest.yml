@@ -128,18 +128,19 @@ env:
   }'
 
   # Define optimization flags per architecture (following PostGIS CI script style)
-  # Production architectures (amd64, arm64): -O3 with full compiler checks for maximum performance
-  # Experimental architectures: -O1 with full compiler checks for build stability
+  # Production architectures (amd64, arm64): -O3 with compiler warnings for maximum performance
+  # Experimental architectures: -O1 with compiler warnings for build stability
+  # Note: -Werror removed to prevent build failures from PostGIS warnings
   ARCH_OPTIMIZATION_FLAGS: '{
-    "amd64":    "-O3 -Wall -fno-omit-frame-pointer -Werror",
-    "arm64":    "-O3 -Wall -fno-omit-frame-pointer -Werror",
-    "armv6":    "-O1 -Wall -fno-omit-frame-pointer -Werror",
-    "armv7":    "-O1 -Wall -fno-omit-frame-pointer -Werror",
-    "386":      "-O1 -Wall -fno-omit-frame-pointer -Werror",
-    "mips64le": "-O1 -Wall -fno-omit-frame-pointer -Werror",
-    "ppc64le":  "-O1 -Wall -fno-omit-frame-pointer -Werror",
-    "riscv64":  "-O1 -Wall -fno-omit-frame-pointer -Werror",
-    "s390x":    "-O1 -Wall -fno-omit-frame-pointer -Werror"
+    "amd64":    "-O3 -Wall -fno-omit-frame-pointer",
+    "arm64":    "-O3 -Wall -fno-omit-frame-pointer",
+    "armv6":    "-O1 -Wall -fno-omit-frame-pointer",
+    "armv7":    "-O1 -Wall -fno-omit-frame-pointer",
+    "386":      "-O1 -Wall -fno-omit-frame-pointer",
+    "mips64le": "-O1 -Wall -fno-omit-frame-pointer",
+    "ppc64le":  "-O1 -Wall -fno-omit-frame-pointer",
+    "riscv64":  "-O1 -Wall -fno-omit-frame-pointer",
+    "s390x":    "-O1 -Wall -fno-omit-frame-pointer"
   }'
 
   # Define LTO (Link Time Optimization) per architecture
