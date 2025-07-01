@@ -14,6 +14,9 @@ ARG PGIS1_OPTIMIZATION_FLAGS=" -O3 -mtune=generic "
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
 
+# Regression testing mode: skip, test, require
+ARG PGIS1_REGRESSION_MODE=require
+
 FROM ${PGIS1_BASE_IMAGE}
 
 ARG PGIS1_POSTGIS_REPOSITORY
@@ -23,6 +26,7 @@ ARG PGIS1_OPTIMIZATION_FLAGS
 ARG PGIS1_SOURCE_REPO
 ARG PGIS1_MAINTAINER
 ARG PGIS1_BASE_IMAGE
+ARG PGIS1_REGRESSION_MODE
 
 LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.opencontainers.image.description="PostGIS ${PGIS1_POSTGIS_CHECKOUT} spatial database extension with PostgreSQL 15 alpine3.22" \
@@ -42,7 +46,8 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.base.extensions="postgis,postgis_raster,postgis_sfcgal,postgis_topology,postgis_tiger_geocoder,address_standardizer" \
       org.postgis.base.name="${PGIS1_BASE_IMAGE}" \
       org.postgis.base.optimization.flags="${PGIS1_OPTIMIZATION_FLAGS}" \
-      org.postgis.base.source.repository="${PGIS1_POSTGIS_REPOSITORY}"
+      org.postgis.base.source.repository="${PGIS1_POSTGIS_REPOSITORY}" \
+      org.postgis.base.regression.mode="${PGIS1_REGRESSION_MODE}"
 
 
 RUN set -eux \
@@ -135,13 +140,27 @@ RUN set -eux \
     && projsync --system-directory --file us_noaa_eshpgn \
     && projsync --system-directory --file us_noaa_prvi \
     && projsync --system-directory --file us_noaa_wmhpgn \
-    # This section performs a regression check.
+    # Regression testing section with configurable modes
     && mkdir /tempdb \
     && chown -R postgres:postgres /tempdb \
     && su postgres -c 'pg_ctl -D /tempdb init' \
     && su postgres -c 'pg_ctl -D /tempdb -c -l /tmp/logfile -o '-F' start ' \
     && cd regress \
-    && make -j$(nproc) check RUNTESTFLAGS="--extension --verbose" PGUSER=postgres \
+    && echo "Regression testing mode: ${PGIS1_REGRESSION_MODE}" \
+    && if [ "${PGIS1_REGRESSION_MODE}" = "require" ]; then \
+        echo "Running regression tests in REQUIRE mode - tests must pass"; \
+        make -j$(nproc) check RUNTESTFLAGS="--extension --verbose" PGUSER=postgres; \
+    elif [ "${PGIS1_REGRESSION_MODE}" = "test" ]; then \
+        echo "Running regression tests in TEST mode - tests will run but won't fail build"; \
+        { make -j$(nproc) check RUNTESTFLAGS="--extension --verbose" PGUSER=postgres 2>&1 || echo "REGRESSION_TESTS_FAILED_EXIT_CODE_$?"; } | tee /tmp/regression_test.log; \
+        zstd -3 --long --rm /tmp/regression_test.log -o /_pgis_regression_test.log.zst; \
+        echo "Regression test completed (test mode - non-blocking), log saved compressed with zstd --long"; \
+    elif [ "${PGIS1_REGRESSION_MODE}" = "skip" ]; then \
+        echo "Regression tests SKIPPED (mode: skip)"; \
+    else \
+        echo "ERROR: Invalid PGIS1_REGRESSION_MODE: ${PGIS1_REGRESSION_MODE}. Valid values: skip, test, require"; \
+        exit 1; \
+    fi \
     \
     && su postgres -c 'psql    -c "CREATE EXTENSION IF NOT EXISTS postgis;"' \
     && su postgres -c 'psql    -c "CREATE EXTENSION IF NOT EXISTS postgis_raster;"' \

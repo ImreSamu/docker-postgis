@@ -98,6 +98,32 @@ env:
     "s390x":    "test"
   }'
 
+  # Define regression mode emoji mapping  
+  REGRESSION_MODE_EMOJIS: '{
+    "skip": "💨",
+    "test": "🔍", 
+    "require": "🔒"
+  }'
+
+  # Define build type emoji mapping (native vs QEMU)
+  BUILD_TYPE_EMOJIS: '{
+    "native": "⚡",
+    "qemu": "🔄"
+  }'
+
+  # Define native build detection (runner architecture matches target architecture)
+  ARCH_NATIVE_BUILDS: '{
+    "amd64":    "native",
+    "arm64":    "native",
+    "armv6":    "qemu",
+    "armv7":    "qemu", 
+    "386":      "qemu",
+    "mips64le": "qemu",
+    "ppc64le":  "qemu",
+    "riscv64":  "qemu",
+    "s390x":    "qemu"
+  }'
+
   # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
   ARCH_ANNOTATIONS: '{
     "amd64":    {"os": "linux", "arch": "amd64"},
@@ -143,6 +169,9 @@ jobs:
         ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
         ARCH_EMOJIS='${{ env.ARCH_EMOJIS }}'
         ARCH_REGRESSION_MODES='${{ env.ARCH_REGRESSION_MODES }}'
+        REGRESSION_MODE_EMOJIS='${{ env.REGRESSION_MODE_EMOJIS }}'
+        BUILD_TYPE_EMOJIS='${{ env.BUILD_TYPE_EMOJIS }}'
+        ARCH_NATIVE_BUILDS='${{ env.ARCH_NATIVE_BUILDS }}'
 
         MATRIX_JSON='{"include":[]}'
 
@@ -152,6 +181,9 @@ jobs:
             platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
             emoji=$(echo "$ARCH_EMOJIS" | jq -r ".[\"$arch\"]")
             regression_mode=$(echo "$ARCH_REGRESSION_MODES" | jq -r ".[\"$arch\"]")
+            regression_emoji=$(echo "$REGRESSION_MODE_EMOJIS" | jq -r ".[\"$regression_mode\"]")
+            build_type=$(echo "$ARCH_NATIVE_BUILDS" | jq -r ".[\"$arch\"]")
+            build_type_emoji=$(echo "$BUILD_TYPE_EMOJIS" | jq -r ".[\"$build_type\"]")
 
             ENTRY=$(jq -n \
               --arg image_dir "$image_dir" \
@@ -160,13 +192,17 @@ jobs:
               --arg platform "$platform" \
               --arg emoji "$emoji" \
               --arg regression_mode "$regression_mode" \
+              --arg regression_emoji "$regression_emoji" \
+              --arg build_type_emoji "$build_type_emoji" \
               '{
                 image_dir: $image_dir,
                 arch_variant: $arch,
                 runner: $runner,
                 target: $platform,
                 arch_emoji: $emoji,
-                regression_mode: $regression_mode
+                regression_mode: $regression_mode,
+                regression_emoji: $regression_emoji,
+                build_type_emoji: $build_type_emoji
               }')
 
             MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".include += [$ENTRY]")
@@ -180,7 +216,7 @@ jobs:
         echo "$MATRIX_JSON" | jq '.'
 
   build-images:
-    name: "${{ matrix.arch_emoji }} ${{ matrix.arch_variant }} | ${{ matrix.image_dir }}"
+    name: "${{ matrix.arch_emoji }}${{ matrix.arch_variant }}${{ matrix.build_type_emoji }}|${{ matrix.regression_emoji }}${{ matrix.image_dir }}"
     needs: prepare-matrix
     runs-on: ${{ matrix.runner }}
     continue-on-error: false
