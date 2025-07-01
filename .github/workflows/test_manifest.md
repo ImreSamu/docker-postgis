@@ -12,18 +12,18 @@ The workflow implements a sophisticated multi-architecture Docker build system t
 
 ## Architecture Support
 
-The workflow currently supports these architectures with their corresponding emojis for UI clarity:
+The workflow currently supports these architectures with their corresponding emojis for UI clarity and regression testing modes:
 
-| Architecture | Docker Platform | Runner | Emoji | Use Case |
-|--------------|-----------------|--------|-------|----------|
-| amd64        | linux/amd64     | ubuntu-22.04 | 💻 | Intel/AMD 64-bit |
-| arm64        | linux/arm64     | ubuntu-22.04-arm | 💪 | Apple Silicon, AWS Graviton |
-| armv6        | linux/arm/v6    | ubuntu-22.04-arm | 🦾 | Raspberry Pi Zero |
-| armv7        | linux/arm/v7    | ubuntu-22.04-arm | 🤖 | Raspberry Pi 2/3/4 |
-| 386          | linux/386       | ubuntu-22.04 | 🖥️ | Legacy 32-bit Intel |
-| ppc64le      | linux/ppc64le   | ubuntu-22.04 | ⚡ | IBM POWER systems |
-| s390x        | linux/s390x     | ubuntu-22.04 | 🏢 | IBM mainframes |
-| mips64le     | linux/mips64le  | ubuntu-22.04 | 🎯 | MIPS 64-bit systems |
+| Architecture | Docker Platform | Runner | Emoji | Regression Mode | Use Case |
+|--------------|-----------------|--------|-------|-----------------|----------|
+| amd64        | linux/amd64     | ubuntu-24.04 | 💻 | require | Intel/AMD 64-bit (Production) |
+| arm64        | linux/arm64     | ubuntu-24.04-arm | 💪 | require | Apple Silicon, AWS Graviton (Production) |
+| armv6        | linux/arm/v6    | ubuntu-24.04-arm | 🦾 | test | Raspberry Pi Zero (Experimental) |
+| armv7        | linux/arm/v7    | ubuntu-24.04-arm | 🤖 | test | Raspberry Pi 2/3/4 (Experimental) |
+| 386          | linux/386       | ubuntu-24.04 | 🖥️ | test | Legacy 32-bit Intel (Experimental) |
+| ppc64le      | linux/ppc64le   | ubuntu-24.04 | ⚡ | test | IBM POWER systems (Experimental) |
+| riscv64      | linux/riscv64   | ubuntu-24.04 | 🧩 | test | RISC-V 64-bit (Experimental) |
+| s390x        | linux/s390x     | ubuntu-24.04 | 🏢 | test | IBM mainframes (Experimental) |
 
 ## Configuration
 
@@ -40,6 +40,7 @@ The workflow currently supports these architectures with their corresponding emo
 - `ARCH_RUNNERS`: Maps architectures to GitHub runner types
 - `ARCH_PLATFORMS`: Maps architectures to Docker platform strings
 - `ARCH_EMOJIS`: Maps architectures to emoji icons for UI
+- `ARCH_REGRESSION_MODES`: Maps architectures to regression testing modes (skip/test/require)
 - `ARCH_ANNOTATIONS`: Maps architectures to manifest annotation metadata
 
 #### Image Configuration
@@ -54,15 +55,58 @@ To add support for new architectures:
    SUPPORTED_ARCHITECTURES: '["amd64", "arm64", "new_arch"]'
    ```
 
-2. **Configure mappings** in all four mapping objects:
+2. **Configure mappings** in all five mapping objects:
    ```yaml
-   ARCH_RUNNERS: '{"new_arch": "ubuntu-22.04"}'
+   ARCH_RUNNERS: '{"new_arch": "ubuntu-24.04"}'
    ARCH_PLATFORMS: '{"new_arch": "linux/new_arch"}'
    ARCH_EMOJIS: '{"new_arch": "🔥"}'
+   ARCH_REGRESSION_MODES: '{"new_arch": "test"}'
    ARCH_ANNOTATIONS: '{"new_arch": {"os": "linux", "arch": "new_arch"}}'
    ```
 
 3. **No code changes required** - the workflow dynamically generates the build matrix
+
+## Regression Testing Modes
+
+The workflow supports three regression testing modes for PostGIS builds:
+
+### Mode Descriptions
+
+| Mode | Description | Behavior | Log Storage | Use Case |
+|------|-------------|----------|-------------|----------|
+| `skip` | No regression tests | Tests are completely skipped | None | Fast builds, debugging |
+| `test` | Non-blocking tests | Tests run but failures don't fail the build | Compressed with zstd --long | Development, experimental architectures |
+| `require` | Blocking tests | Tests must pass or build fails | None (tests must pass) | Production architectures |
+
+### Architecture-Specific Modes
+
+- **Production Architectures** (`amd64`, `arm64`): Use `require` mode
+  - Tests must pass for build to succeed
+  - Ensures production image quality
+  - No log storage needed (tests pass or build fails)
+
+- **Experimental Architectures** (all others): Use `test` mode  
+  - Tests run to catch issues early
+  - Build continues even if tests fail
+  - Regression logs saved compressed for debugging
+  - Enables development on new architectures
+
+### Log Management
+
+For `test` mode, regression test logs are:
+- Captured during build execution (visible in build output)
+- Compressed using `zstd -3 --long` for optimal size
+- Stored as `/_pgis_regression_test.log.zst` in the final image
+- Can be extracted with: `zstd -dc /_pgis_regression_test.log.zst`
+
+### Template Integration
+
+The regression testing is controlled via Dockerfile template build argument:
+```dockerfile
+ARG PGIS1_REGRESSION_MODE=require
+```
+
+This argument is automatically set by the workflow based on the architecture being built.
 
 ## Workflow Jobs
 
@@ -81,9 +125,10 @@ To add support for new architectures:
   1. **QEMU Setup**: Enables cross-platform builds
   2. **Docker Buildx**: Advanced build features
   3. **Dependency Installation**: Python tools, manifest-tool
-  4. **Image Building**: Architecture-specific builds with caching
+  4. **Image Building**: Architecture-specific builds with caching and regression mode configuration
   5. **Testing**: Official PostgreSQL test suite validation
   6. **Push**: Conditional push to registry
+- **Regression Testing**: Each build uses architecture-specific regression mode (`require` for production, `test` for experimental)
 
 ### 📦 Create Manifests (Multi-job)
 - **Purpose**: Creates multi-architecture manifests

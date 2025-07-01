@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Multi-Architecture Docker Manifest Test
 
 on:
@@ -35,61 +36,83 @@ env:
   TARGET_BRANCH: 'manifest'  # Change to 'master' for production, 'manifest' for testing
 
 
-  # Define supported architectures centrally - currently active: amd64, arm64
+  # Define supported architectures centrally 
+  #    - currently active: amd64, arm64 is the best supported.
   # To add more architectures, add them to this array and configure mappings below
-  SUPPORTED_ARCHITECTURES: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "s390x", "mips64le"]'
-  # For additional architectures, add like: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "s390x", "mips64le"]'
+  SUPPORTED_ARCHITECTURES: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]'
+  # For additional architectures, add like: '["amd64", "arm64", "armv6", "armv7",
+  #                                           "386", "mips64le", "ppc64le", "riscv64", "s390x"]'
 
   # Define architecture to runner mapping - all architectures defined for easy expansion
   ARCH_RUNNERS: '{
-    "amd64": "ubuntu-24.04",
-    "arm64": "ubuntu-24.04-arm",
-    "armv6": "ubuntu-24.04-arm",
-    "armv7": "ubuntu-24.04-arm",
-    "386": "ubuntu-24.04",
-    "ppc64le": "ubuntu-24.04",
-    "s390x": "ubuntu-24.04",
-    "mips64le": "ubuntu-24.04"
+    "amd64":    "ubuntu-24.04",
+    "arm64":    "ubuntu-24.04-arm",
+    "armv6":    "ubuntu-24.04-arm",
+    "armv7":    "ubuntu-24.04-arm",
+    "386":      "ubuntu-24.04",
+    "mips64le": "ubuntu-24.04",
+    "ppc64le":  "ubuntu-24.04",
+    "riscv64":  "ubuntu-24.04",
+    "s390x":    "ubuntu-24.04"
   }'
 
   # Define architecture to Docker platform mapping - all architectures defined for easy expansion
   ARCH_PLATFORMS: '{
-    "amd64": "linux/amd64",
-    "arm64": "linux/arm64",
-    "armv6": "linux/arm/v6",
-    "armv7": "linux/arm/v7",
-    "386": "linux/386",
-    "ppc64le": "linux/ppc64le",
-    "s390x": "linux/s390x",
-    "mips64le": "linux/mips64le"
+    "amd64":    "linux/amd64",
+    "arm64":    "linux/arm64",
+    "armv6":    "linux/arm/v6",
+    "armv7":    "linux/arm/v7",
+    "386":      "linux/386",
+    "mips64le": "linux/mips64le",
+    "ppc64le":  "linux/ppc64le",
+    "riscv64":  "linux/riscv64",
+    "s390x":    "linux/s390x"
+
   }'
 
   # Define architecture emoji mapping for better job visibility
   ARCH_EMOJIS: '{
-    "amd64": "💻",
-    "arm64": "💪",
-    "armv6": "🦾",
-    "armv7": "🤖",
-    "386": "🖥️",
-    "ppc64le": "⚡",
-    "s390x": "🏢",
-    "mips64le": "🎯"
+    "amd64":    "💻",
+    "arm64":    "💪",
+    "armv6":    "🦾",
+    "armv7":    "🤖",
+    "386":      "🖥️",
+    "mips64le": "🎯",
+    "ppc64le":  "⚡",
+    "riscv64":  "🧩",
+    "s390x":    "🏢"
+  }'
+
+  # Define regression testing mode per architecture
+  # Production architectures (amd64, arm64): require - tests must pass
+  # Development/experimental architectures: test - tests run but won't fail build
+  ARCH_REGRESSION_MODES: '{
+    "amd64":    "require",
+    "arm64":    "require",
+    "armv6":    "test",
+    "armv7":    "test",
+    "386":      "test",
+    "mips64le": "test",
+    "ppc64le":  "test",
+    "riscv64":  "test",
+    "s390x":    "test"
   }'
 
   # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
   ARCH_ANNOTATIONS: '{
-    "amd64": {"os": "linux", "arch": "amd64"},
-    "arm64": {"os": "linux", "arch": "arm64"},
-    "armv6": {"os": "linux", "arch": "arm", "variant": "v6"},
-    "armv7": {"os": "linux", "arch": "arm", "variant": "v7"},
-    "386": {"os": "linux", "arch": "386"},
-    "ppc64le": {"os": "linux", "arch": "ppc64le"},
-    "s390x": {"os": "linux", "arch": "s390x"},
-    "mips64le": {"os": "linux", "arch": "mips64le"}
+    "amd64":    {"os": "linux", "arch": "amd64"},
+    "arm64":    {"os": "linux", "arch": "arm64"},
+    "armv6":    {"os": "linux", "arch": "arm", "variant": "v6"},
+    "armv7":    {"os": "linux", "arch": "arm", "variant": "v7"},
+    "386":      {"os": "linux", "arch": "386"},
+    "mips64le": {"os": "linux", "arch": "mips64le"},
+    "ppc64le":  {"os": "linux", "arch": "ppc64le"},
+    "riscv64":  {"os": "linux", "arch": "riscv64"},
+    "s390x":    {"os": "linux", "arch": "s390x"}
   }'
 
   # Define image directories to build - automatically updated by tools/apply-ci.sh
-  IMAGE_DIRECTORIES: '["17-3.5/alpine3.22", "17-3.5/bookworm"]'  # multi-arch-include: change here for testing
+  IMAGE_DIRECTORIES: '["17-3.5/alpine3.22"]'  # multi-arch-include: change here for testing
 
 jobs:
   prepare-matrix:
@@ -119,6 +142,7 @@ jobs:
         ARCH_RUNNERS='${{ env.ARCH_RUNNERS }}'
         ARCH_PLATFORMS='${{ env.ARCH_PLATFORMS }}'
         ARCH_EMOJIS='${{ env.ARCH_EMOJIS }}'
+        ARCH_REGRESSION_MODES='${{ env.ARCH_REGRESSION_MODES }}'
 
         MATRIX_JSON='{"include":[]}'
 
@@ -127,6 +151,7 @@ jobs:
             runner=$(echo "$ARCH_RUNNERS" | jq -r ".[\"$arch\"]")
             platform=$(echo "$ARCH_PLATFORMS" | jq -r ".[\"$arch\"]")
             emoji=$(echo "$ARCH_EMOJIS" | jq -r ".[\"$arch\"]")
+            regression_mode=$(echo "$ARCH_REGRESSION_MODES" | jq -r ".[\"$arch\"]")
 
             ENTRY=$(jq -n \
               --arg image_dir "$image_dir" \
@@ -134,12 +159,14 @@ jobs:
               --arg runner "$runner" \
               --arg platform "$platform" \
               --arg emoji "$emoji" \
+              --arg regression_mode "$regression_mode" \
               '{
                 image_dir: $image_dir,
                 arch_variant: $arch,
                 runner: $runner,
                 target: $platform,
-                arch_emoji: $emoji
+                arch_emoji: $emoji,
+                regression_mode: $regression_mode
               }')
 
             MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".include += [$ENTRY]")
@@ -240,6 +267,7 @@ jobs:
         sbom: false
         build-args: |
           BUILDKIT_INLINE_CACHE=1
+          PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
 
     - name: List docker images
       run: docker images
