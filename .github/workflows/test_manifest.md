@@ -14,17 +14,17 @@ The workflow implements a sophisticated multi-architecture Docker build system t
 
 The workflow currently supports these architectures with their corresponding emojis for UI clarity and regression testing modes:
 
-| Architecture | Docker Platform | Runner | Emoji | Regression Mode | Build Type | Use Case |
-|--------------|-----------------|--------|-------|-----------------|------------|----------|
-| amd64        | linux/amd64     | ubuntu-24.04 | 💻 | require | native ⚡ | Intel/AMD 64-bit (Production) |
-| arm64        | linux/arm64     | ubuntu-24.04-arm | 💪 | require | native ⚡ | Apple Silicon, AWS Graviton (Production) |
-| armv6        | linux/arm/v6    | ubuntu-24.04-arm | 🦾 | test | qemu 🔄 | Raspberry Pi Zero (Experimental) |
-| armv7        | linux/arm/v7    | ubuntu-24.04-arm | 🤖 | test | qemu 🔄 | Raspberry Pi 2/3/4 (Experimental) |
-| 386          | linux/386       | ubuntu-24.04 | 🖥️ | test | qemu 🔄 | Legacy 32-bit Intel (Experimental) |
-| mips64le     | linux/mips64le  | ubuntu-24.04 | 🎯 | test_nojit | qemu 🔄 | MIPS 64-bit systems (No-JIT) |
-| ppc64le      | linux/ppc64le   | ubuntu-24.04 | ⚡ | test | qemu 🔄 | IBM POWER systems (Experimental) |
-| riscv64      | linux/riscv64   | ubuntu-24.04 | 🧩 | test_nojit | qemu 🔄 | RISC-V 64-bit (No-JIT) |
-| s390x        | linux/s390x     | ubuntu-24.04 | 🏢 | test_nojit | qemu 🔄 | IBM mainframes (No-JIT) |
+| Architecture | Docker Platform | Runner | Emoji | Regression Mode | Build Type | Optimization | Use Case |
+|--------------|-----------------|--------|-------|-----------------|------------|-------------|----------|
+| amd64        | linux/amd64     | ubuntu-24.04 | 💻 | require | native ⚡ | -O3 -mtune=generic | Intel/AMD 64-bit (Production) |
+| arm64        | linux/arm64     | ubuntu-24.04-arm | 💪 | require | native ⚡ | -O3 -mtune=generic | Apple Silicon, AWS Graviton (Production) |
+| armv6        | linux/arm/v6    | ubuntu-24.04-arm | 🦾 | test | qemu 🔄 | -O1 | Raspberry Pi Zero (Experimental) |
+| armv7        | linux/arm/v7    | ubuntu-24.04-arm | 🤖 | test | qemu 🔄 | -O1 | Raspberry Pi 2/3/4 (Experimental) |
+| 386          | linux/386       | ubuntu-24.04 | 🖥️ | test | qemu 🔄 | -O1 | Legacy 32-bit Intel (Experimental) |
+| mips64le     | linux/mips64le  | ubuntu-24.04 | 🎯 | test_nojit | qemu 🔄 | -O1 | MIPS 64-bit systems (No-JIT) |
+| ppc64le      | linux/ppc64le   | ubuntu-24.04 | ⚡ | test | qemu 🔄 | -O1 | IBM POWER systems (Experimental) |
+| riscv64      | linux/riscv64   | ubuntu-24.04 | 🧩 | test_nojit | qemu 🔄 | -O1 | RISC-V 64-bit (No-JIT) |
+| s390x        | linux/s390x     | ubuntu-24.04 | 🏢 | test_nojit | qemu 🔄 | -O1 | IBM mainframes (No-JIT) |
 
 ## Configuration
 
@@ -45,6 +45,7 @@ The workflow currently supports these architectures with their corresponding emo
 - `REGRESSION_MODE_EMOJIS`: Maps regression modes to emoji representations
 - `BUILD_TYPE_EMOJIS`: Maps build types (native/qemu) to emoji representations  
 - `ARCH_NATIVE_BUILDS`: Maps architectures to build types (native vs qemu)
+- `ARCH_OPTIMIZATION_FLAGS`: Maps architectures to compiler optimization flags
 - `ARCH_ANNOTATIONS`: Maps architectures to manifest annotation metadata
 
 #### Image Configuration
@@ -66,6 +67,7 @@ To add support for new architectures:
    ARCH_EMOJIS: '{"new_arch": "🔥"}'
    ARCH_REGRESSION_MODES: '{"new_arch": "test"}'
    ARCH_NATIVE_BUILDS: '{"new_arch": "qemu"}'
+   ARCH_OPTIMIZATION_FLAGS: '{"new_arch": "-O1"}'
    ARCH_ANNOTATIONS: '{"new_arch": {"os": "linux", "arch": "new_arch"}}'
    ```
 
@@ -175,6 +177,43 @@ jit = off
 - **User-Friendly**: No manual configuration required for end users
 - **Documented**: Clear comment explains why JIT is disabled
 - **Persistent**: Setting survives container restarts and data volume mounts
+
+## Compiler Optimization Strategy
+
+The workflow uses architecture-specific compiler optimization flags to balance performance and build reliability:
+
+### Optimization Levels
+
+| Architecture Category | Optimization Flags | Reasoning |
+|----------------------|-------------------|-----------|
+| **Production** (amd64, arm64) | `-O3 -mtune=generic` | Maximum performance optimization for well-tested, stable architectures |
+| **Experimental** (all others) | `-O1` | Conservative optimization for faster builds and better compiler stability |
+
+### Benefits by Category
+
+#### Production Architectures (💻 amd64, 💪 arm64)
+- **Maximum Performance**: `-O3` enables aggressive optimizations
+- **Generic Tuning**: `-mtune=generic` ensures compatibility across CPU variants
+- **Production Ready**: Extensively tested optimization level
+- **Critical Use Cases**: Optimized for performance-sensitive deployments
+
+#### Experimental Architectures (🦾 armv6, 🤖 armv7, 🖥️ 386, 🎯 mips64le, ⚡ ppc64le, 🧩 riscv64, 🏢 s390x)
+- **Faster Builds**: `-O1` significantly reduces compilation time
+- **Compiler Stability**: Lower chance of encountering optimization-related bugs
+- **Development Focus**: Prioritizes build success over maximum performance
+- **Debugging Friendly**: Easier to debug issues when they occur
+
+### Technical Implementation
+
+The optimization flags are automatically applied via the `PGIS1_OPTIMIZATION_FLAGS` build argument:
+
+```dockerfile
+ARG PGIS1_OPTIMIZATION_FLAGS=" -O3 -mtune=generic "
+# Applied during PostGIS configure step:
+./configure --with-optimization-flags="${PGIS1_OPTIMIZATION_FLAGS}"
+```
+
+The workflow dynamically selects the appropriate flags based on the target architecture through the `ARCH_OPTIMIZATION_FLAGS` mapping.
 
 ## Build Summary Report
 

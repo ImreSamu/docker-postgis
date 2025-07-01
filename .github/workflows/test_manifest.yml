@@ -126,6 +126,21 @@ env:
     "s390x":    "qemu"
   }'
 
+  # Define optimization flags per architecture
+  # Production architectures (amd64, arm64): -O3 -mtune=generic for maximum performance
+  # Experimental architectures: -O1 for faster builds and better stability
+  ARCH_OPTIMIZATION_FLAGS: '{
+    "amd64":    "-O3 -mtune=generic",
+    "arm64":    "-O3 -mtune=generic",
+    "armv6":    "-O1",
+    "armv7":    "-O1",
+    "386":      "-O1",
+    "mips64le": "-O1",
+    "ppc64le":  "-O1",
+    "riscv64":  "-O1",
+    "s390x":    "-O1"
+  }'
+
   # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
   ARCH_ANNOTATIONS: '{
     "amd64":    {"os": "linux", "arch": "amd64"},
@@ -174,6 +189,7 @@ jobs:
         REGRESSION_MODE_EMOJIS='${{ env.REGRESSION_MODE_EMOJIS }}'
         BUILD_TYPE_EMOJIS='${{ env.BUILD_TYPE_EMOJIS }}'
         ARCH_NATIVE_BUILDS='${{ env.ARCH_NATIVE_BUILDS }}'
+        ARCH_OPTIMIZATION_FLAGS='${{ env.ARCH_OPTIMIZATION_FLAGS }}'
 
         MATRIX_JSON='{"include":[]}'
 
@@ -186,6 +202,7 @@ jobs:
             regression_emoji=$(echo "$REGRESSION_MODE_EMOJIS" | jq -r ".[\"$regression_mode\"]")
             build_type=$(echo "$ARCH_NATIVE_BUILDS" | jq -r ".[\"$arch\"]")
             build_type_emoji=$(echo "$BUILD_TYPE_EMOJIS" | jq -r ".[\"$build_type\"]")
+            optimization_flags=$(echo "$ARCH_OPTIMIZATION_FLAGS" | jq -r ".[\"$arch\"]")
 
             ENTRY=$(jq -n \
               --arg image_dir "$image_dir" \
@@ -196,6 +213,7 @@ jobs:
               --arg regression_mode "$regression_mode" \
               --arg regression_emoji "$regression_emoji" \
               --arg build_type_emoji "$build_type_emoji" \
+              --arg optimization_flags "$optimization_flags" \
               '{
                 image_dir: $image_dir,
                 arch_variant: $arch,
@@ -204,7 +222,8 @@ jobs:
                 arch_emoji: $emoji,
                 regression_mode: $regression_mode,
                 regression_emoji: $regression_emoji,
-                build_type_emoji: $build_type_emoji
+                build_type_emoji: $build_type_emoji,
+                optimization_flags: $optimization_flags
               }')
 
             MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".include += [$ENTRY]")
@@ -306,6 +325,7 @@ jobs:
         build-args: |
           BUILDKIT_INLINE_CACHE=1
           PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
+          PGIS1_OPTIMIZATION_FLAGS=${{ matrix.optimization_flags }}
 
     - name: List docker images
       run: docker images
