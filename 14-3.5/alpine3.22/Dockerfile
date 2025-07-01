@@ -153,6 +153,13 @@ RUN set -eux \
     elif [ "${PGIS1_REGRESSION_MODE}" = "test" ]; then \
         echo "Running regression tests in TEST mode - tests will run but won't fail build"; \
         { make -j$(nproc) check RUNTESTFLAGS="--extension --verbose" PGUSER=postgres 2>&1 || echo "REGRESSION_TESTS_FAILED_EXIT_CODE_$?"; } | tee /tmp/regression_test.log; \
+        echo "Stopping potentially damaged server after regression tests"; \
+        su postgres -c 'pg_ctl -D /tempdb --mode=immediate stop' || true; \
+        echo "Cleaning and restarting fresh server for extension testing"; \
+        rm -rf /tempdb/*; \
+        chown -R postgres:postgres /tempdb; \
+        su postgres -c 'pg_ctl -D /tempdb init'; \
+        su postgres -c 'pg_ctl -D /tempdb -c -l /tmp/logfile -o '-F' start '; \
         zstd -3 --long --rm /tmp/regression_test.log -o /_pgis_regression_test.log.zst; \
         echo "Regression test completed (test mode - non-blocking), log saved compressed with zstd --long"; \
     elif [ "${PGIS1_REGRESSION_MODE}" = "skip" ]; then \
