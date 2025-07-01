@@ -264,7 +264,7 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
-      max-parallel: 8
+      max-parallel: 10
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
 
     steps:
@@ -384,6 +384,7 @@ jobs:
     if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
 
     strategy:
+      max-parallel: 1
       matrix:
         image_dir: ${{ fromJson(needs.prepare-matrix.outputs.image_dirs) }}
 
@@ -516,11 +517,9 @@ jobs:
               elif [[ "$regression_mode" == "require" ]]; then
                 result_status="✅ Passed (Required)"
               elif [[ "$regression_mode" == "test" ]]; then
-                result_status="🔍✅ Completed (Tests Passed)"
+                result_status="🔍❓ Build OK (Tests Status: See Log Analysis)"
               elif [[ "$regression_mode" == "test_nojit" ]]; then
-                result_status="🔍🐢✅ Completed (No-JIT Tests Passed)"
-              elif [[ "$regression_mode" == "skip" ]]; then
-                result_status="💨 Skipped (No Tests)"
+                result_status="🔍🐢❓ Build OK (Tests Status: See Log Analysis)"
               else
                 result_status="❓ Unknown"
               fi
@@ -617,10 +616,12 @@ jobs:
               # Determine test result based on log content and job conclusion
               if [[ "$JOB_CONCLUSION" == "success" ]]; then
                 # Check for regression test failure patterns first
-                if echo "$JOB_LOG" | grep -qi "REGRESSION_TESTS_FAILED_EXIT_CODE"; then
-                  TEST_STATUS="🔍⚠️ Tests Failed (Non-blocking)"
-                elif echo "$JOB_LOG" | grep -qi "make:.*Error.*check-regress\|psql.*error.*connection.*lost\|server.*terminated abnormally"; then
-                  TEST_STATUS="🔍⚠️ Tests Failed (Non-blocking)"
+                if echo "$JOB_LOG" | grep -qi "make:.*Error.*check-regress\|psql.*error.*connection.*lost\|server.*terminated abnormally"; then
+                  TEST_STATUS="🔍💥 Tests Crashed (Non-blocking)"
+                elif echo "$JOB_LOG" | grep -qi "REGRESSION_TESTS_FAILED_EXIT_CODE"; then
+                  # Extract the exit code to understand severity
+                  EXIT_CODE=$(echo "$JOB_LOG" | grep -o "REGRESSION_TESTS_FAILED_EXIT_CODE_[0-9]*" | tail -1 | grep -o "[0-9]*$" || echo "unknown")
+                  TEST_STATUS="🔍❌ Tests Failed (Exit: $EXIT_CODE, Non-blocking)"
                 elif echo "$JOB_LOG" | grep -qi "regression.*pass\|All tests passed\|CHECK passed\|Regression test completed.*mode.*non-blocking"; then
                   # Check if it's a no-jit test mode
                   if echo "$JOB_LOG" | grep -qi "test_nojit.*mode\|JIT disabled"; then

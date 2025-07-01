@@ -264,14 +264,15 @@ The workflow now includes comprehensive job log analysis that examines complete 
 
 #### Enhanced Test Result Status
 
-The detailed analysis provides more granular test result status:
+The detailed analysis provides more granular test result status with sophisticated failure type detection:
 
 | Status | Emoji | Meaning | Detection Logic |
 |--------|-------|---------|--------------| 
 | `🔍✅ Tests Passed` | 🔍✅ | Tests completed successfully | Job success + regression test pass patterns or completion messages |
 | `🔍🐢✅ Tests Passed (No-JIT)` | 🔍🐢✅ | No-JIT tests completed successfully | Job success + test_nojit mode patterns + JIT disabled |
-| `🔍⚠️ Tests Failed (Non-blocking)` | 🔍⚠️ | Tests failed but build continued | Job success + `REGRESSION_TESTS_FAILED_EXIT_CODE`, `make: *** Error`, `psql: error: connection lost`, or `server terminated abnormally` patterns |
-| `🔍❌ Tests Error` | 🔍❌ | Test execution errors | Job failure + test/regression failure patterns |
+| `🔍💥 Tests Crashed (Non-blocking)` | 🔍💥 | Test execution crashed during runtime | Job success + `make: *** Error ... check-regress`, `psql: error: connection lost`, or `server terminated abnormally` patterns |
+| `🔍❌ Tests Failed (Exit: N, Non-blocking)` | 🔍❌ | Tests ran but failed with specific exit code | Job success + `REGRESSION_TESTS_FAILED_EXIT_CODE_N` pattern, extracts exit code |
+| `🔍❌ Tests Error` | 🔍❌ | Test execution errors (blocking) | Job failure + test/regression failure patterns |
 | `🔍❌ Build Error` | 🔍❌ | Build compilation/setup errors | Job failure + general error patterns |
 | `🔍✅ Build Success` | 🔍✅ | Build successful, tests not detected | Job success without specific test patterns |
 | `🔍⏸️ {status}` | 🔍⏸️ | Other job status | Cancelled, skipped, in progress, etc. |
@@ -286,10 +287,12 @@ The summary includes a comprehensive analysis table:
 
 | Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |
 |-----|-----------------|--------------|--------|----------|-------------|-------------|
-| 💻amd64\|🔒17-3.5/alpine3.22⚡ | 17-3.5/alpine3.22 | amd64 | 110 | 30 | 🔍✅ Tests Passed | [View Logs](link) |
-| 💪arm64\|🔒18-3.5/bookworm⚡ | 18-3.5/bookworm | arm64 | 110 | 28 | 🔍✅ Tests Passed | [View Logs](link) |
-| 🦾armv6\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | armv6 | 113 | 30 | 🔍⚠️ Tests Failed (Non-blocking) | [View Logs](link) |
-| 🧩riscv64\|🔍🐢17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | riscv64 | 114 | 33 | 🔍🐢✅ Tests Passed (No-JIT) | [View Logs](link) |
+| 💻amd64\|🔒17-3.5/alpine3.22⚡ | 17-3.5/alpine3.22 | amd64 | 0 | 20 | 🔍✅ Tests Passed | [View Logs](link) |
+| 💪arm64\|🔒18-3.5/bookworm⚡ | 18-3.5/bookworm | arm64 | 0 | 17 | 🔍✅ Tests Passed | [View Logs](link) |
+| 🦾armv6\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | armv6 | 3 | 19 | 🔍✅ Build Success | [View Logs](link) |
+| 🤖armv7\|🔍17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | armv7 | 3 | 19 | 🔍💥 Tests Crashed (Non-blocking) | [View Logs](link) |
+| 🧩riscv64\|🔍🐢17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | riscv64 | 0 | 23 | 🔍🐢✅ Tests Passed (No-JIT) | [View Logs](link) |
+| 🖥️386\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | 386 | 2 | 22 | 🔍❌ Tests Failed (Exit: 5, Non-blocking) | [View Logs](link) |
 ```
 
 #### Enhanced Test Failure Detection
