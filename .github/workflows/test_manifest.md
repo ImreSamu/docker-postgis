@@ -275,6 +275,7 @@ The detailed analysis provides more granular test result status with sophisticat
 | `🔍❌ Tests Error` | 🔍❌ | Test execution errors (blocking) | Job failure + test/regression failure patterns |
 | `🔍❌ Build Error` | 🔍❌ | Build compilation/setup errors | Job failure + general error patterns |
 | `🔍✅ Build Success` | 🔍✅ | Build successful, tests not detected | Job success without specific test patterns |
+| `🔍💾 Cache/No Log Analysis` | 🔍💾 | Log unavailable or from cache | Log unavailable or too short (<100 chars), likely cached build |
 | `🔍⏸️ {status}` | 🔍⏸️ | Other job status | Cancelled, skipped, in progress, etc. |
 | `🔍❓ Unknown` | 🔍❓ | Status could not be determined | Log unavailable or parsing errors |
 
@@ -283,16 +284,17 @@ The detailed analysis provides more granular test result status with sophisticat
 The summary includes a comprehensive analysis table:
 
 ```markdown
-### Detailed Job Log Analysis
+### Build Results & Log Analysis
 
-| Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |
-|-----|-----------------|--------------|--------|----------|-------------|-------------|
-| 💻amd64\|🔒17-3.5/alpine3.22⚡ | 17-3.5/alpine3.22 | amd64 | 0 | 20 | 🔍✅ Tests Passed | [View Logs](link) |
-| 💪arm64\|🔒18-3.5/bookworm⚡ | 18-3.5/bookworm | arm64 | 0 | 17 | 🔍✅ Tests Passed | [View Logs](link) |
-| 🦾armv6\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | armv6 | 3 | 19 | 🔍✅ Build Success | [View Logs](link) |
-| 🤖armv7\|🔍17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | armv7 | 3 | 19 | 🔍💥 Tests Crashed (Non-blocking) | [View Logs](link) |
-| 🧩riscv64\|🔍🐢17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | riscv64 | 0 | 23 | 🔍🐢✅ Tests Passed (No-JIT) | [View Logs](link) |
-| 🖥️386\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | 386 | 2 | 22 | 🔍❌ Tests Failed (Exit: 5, Non-blocking) | [View Logs](link) |
+| Image Directory | Architecture | Test Mode | Build Type | Errors | Warnings | Result | Log Details |
+|-----------------|--------------|-----------|------------|--------|----------|--------|-------------|
+| 17-3.5/alpine3.22 | amd64 | 🔒 require | ⚡ native | 0 | 20 | 🔍✅ Tests Passed | [View Logs](link) |
+| 18-3.5/bookworm | arm64 | 🔒 require | ⚡ native | 0 | 17 | 🔍✅ Tests Passed | [View Logs](link) |
+| 18-3.6/alpine3.22 | armv6 | 🔍 test | 🔄 qemu | 3 | 19 | 🔍✅ Build Success | [View Logs](link) |
+| 17-3.5/alpine3.22 | armv7 | 🔍 test | 🔄 qemu | 3 | 19 | 🔍💥 Tests Crashed (Non-blocking) | [View Logs](link) |
+| 17-3.5/alpine3.22 | riscv64 | 🔍🐢 test_nojit | 🔄 qemu | 0 | 23 | 🔍🐢✅ Tests Passed (No-JIT) | [View Logs](link) |
+| 18-3.6/alpine3.22 | 386 | 🔍 test | 🔄 qemu | 2 | 22 | 🔍❌ Tests Failed (Exit: 5, Non-blocking) | [View Logs](link) |
+| 17-3.5/alpine3.22 | amd64 | 🔒 require | ⚡ native | N/A | N/A | 🔍💾 Cache/No Log Analysis | [View Logs](link) |
 ```
 
 #### Enhanced Test Failure Detection
@@ -324,15 +326,16 @@ The log analysis now includes sophisticated pattern matching to accurately detec
 ### Example Summary Table
 
 ```markdown
-### Regression Test Results
+### Build Results & Log Analysis
 
-| Image | Architecture | Test Mode | Build Type | Result |
-|-------|--------------|-----------|------------|--------|
-| 17-3.5/alpine3.22 | 💻 amd64 | 🔒 require | ⚡ native | ✅ Passed (Required) |
-| 17-3.5/alpine3.22 | 💪 arm64 | 🔒 require | ⚡ native | ✅ Passed (Required) |
-| 17-3.5/alpine3.22 | 🦾 armv6 | 🔍 test | 🔄 qemu | 🔍 Completed (Non-blocking) |
-| 17-3.5/alpine3.22 | 🧩 riscv64 | 🔍🐢 test_nojit | 🔄 qemu | 🔍🐢 Completed (No-JIT, Non-blocking) |
-| 17-3.5/alpine3.22 | 🎯 mips64le | 🔍🐢 test_nojit | 🔄 qemu | 🔍🐢 Completed (No-JIT, Non-blocking) |
+| Image Directory | Architecture | Test Mode | Build Type | Errors | Warnings | Result | Log Details |
+|-----------------|--------------|-----------|------------|--------|----------|--------|-------------|
+| 17-3.5/alpine3.22 | amd64 | 🔒 require | ⚡ native | 0 | 20 | 🔍✅ Tests Passed | [View Logs] |
+| 17-3.5/alpine3.22 | arm64 | 🔒 require | ⚡ native | 0 | 17 | 🔍✅ Tests Passed | [View Logs] |
+| 17-3.5/alpine3.22 | armv6 | 🔍 test | 🔄 qemu | 3 | 19 | 🔍✅ Build Success | [View Logs] |
+| 17-3.5/alpine3.22 | armv7 | 🔍 test | 🔄 qemu | 3 | 19 | 🔍💥 Tests Crashed (Non-blocking) | [View Logs] |
+| 17-3.5/alpine3.22 | riscv64 | 🔍🐢 test_nojit | 🔄 qemu | 0 | 23 | 🔍🐢✅ Tests Passed (No-JIT) | [View Logs] |
+| 17-3.5/alpine3.22 | s390x | 💨 skip | 🔄 qemu | N/A | N/A | 🔍💾 Cache/No Log Analysis | [View Logs] |
 ```
 
 ### Benefits
@@ -417,7 +420,8 @@ The workflow supports configurable branch targeting:
 - **Conditional Builds**: Only build changed directories
 
 ### Parallel Execution
-- **Matrix Jobs**: All architectures build simultaneously
+- **Matrix Jobs**: All architectures build simultaneously (max-parallel: 10) - Limited to avoid overwhelming 3rd party servers (projsync, package repositories, etc.)
+- **Manifest Creation**: Sequential processing (max-parallel: 1) to avoid Docker Hub rate limiting
 - **Runner Optimization**: Native ARM runners for ARM builds
 - **Fail-Fast Disabled**: Continue building other architectures on failure
 

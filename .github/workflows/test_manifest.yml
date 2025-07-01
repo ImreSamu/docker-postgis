@@ -486,56 +486,10 @@ jobs:
         ## Multi-Architecture Docker Build Summary
         EOF
 
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-
-        ### Regression Test Results
-
-        | Image | Architecture | Test Mode | Build Type | Result |
-        |-------|--------------|-----------|------------|--------|
-        EOF
-        
-        IMAGES='${{ needs.prepare-matrix.outputs.image_dirs }}'
-        ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
-        ARCH_REGRESSION_MODES='${{ env.ARCH_REGRESSION_MODES }}'
-        REGRESSION_MODE_EMOJIS='${{ env.REGRESSION_MODE_EMOJIS }}'
-        ARCH_EMOJIS='${{ env.ARCH_EMOJIS }}'
-        BUILD_TYPE_EMOJIS='${{ env.BUILD_TYPE_EMOJIS }}'
-        ARCH_NATIVE_BUILDS='${{ env.ARCH_NATIVE_BUILDS }}'
-        
-        for image_dir in $(echo "$IMAGES" | jq -r '.[]'); do
-          for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-            regression_mode=$(echo "$ARCH_REGRESSION_MODES" | jq -r ".[\"$arch\"]")
-            regression_emoji=$(echo "$REGRESSION_MODE_EMOJIS" | jq -r ".[\"$regression_mode\"]")
-            arch_emoji=$(echo "$ARCH_EMOJIS" | jq -r ".[\"$arch\"]")
-            build_type=$(echo "$ARCH_NATIVE_BUILDS" | jq -r ".[\"$arch\"]")
-            build_type_emoji=$(echo "$BUILD_TYPE_EMOJIS" | jq -r ".[\"$build_type\"]")
-            
-            # Determine build result based on job outcome
-            if [[ "${{ needs.build-images.result }}" == "success" ]]; then
-              if [[ "$regression_mode" == "skip" ]]; then
-                result_status="⏭️ Skipped"
-              elif [[ "$regression_mode" == "require" ]]; then
-                result_status="✅ Passed (Required)"
-              elif [[ "$regression_mode" == "test" ]]; then
-                result_status="🔍❓ Build OK (Tests Status: See Log Analysis)"
-              elif [[ "$regression_mode" == "test_nojit" ]]; then
-                result_status="🔍🐢❓ Build OK (Tests Status: See Log Analysis)"
-              else
-                result_status="❓ Unknown"
-              fi
-            elif [[ "${{ needs.build-images.result }}" == "failure" ]]; then
-              if [[ "$regression_mode" == "require" ]]; then
-                result_status="❌ Failed (Build Stopped)"
-              else
-                result_status="⚠️ Build Failed"
-              fi
-            else
-              result_status="⏸️ ${{ needs.build-images.result }}"
-            fi
-            
-            echo "| $image_dir | $arch_emoji $arch | $regression_emoji $regression_mode | $build_type_emoji $build_type | $result_status |" >> $GITHUB_STEP_SUMMARY
-          done
-        done
+        echo "### Build Results & Log Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Image Directory | Architecture | Test Mode | Build Type | Errors | Warnings | Result | Log Details |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------------|--------------|-----------|------------|--------|----------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
 
 
     - name: Analyze complete job results
@@ -545,12 +499,7 @@ jobs:
       run: |
         echo "Analyzing complete job logs for detailed error and warning counts..."
         
-        # Create detailed job log analysis table
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Detailed Job Log Analysis" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |" >> $GITHUB_STEP_SUMMARY
-        echo "|-----|-----------------|--------------|--------|----------|-------------|-------------|" >> $GITHUB_STEP_SUMMARY
+        # Job log analysis data will be written to the combined table above
         
         # Get job details for this workflow run
         JOBS_JSON=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[]')
@@ -604,7 +553,7 @@ jobs:
             WARNING_COUNT=0
             TEST_STATUS="🔍❓ Unknown"
             
-            if [[ "$JOB_LOG" != "Log unavailable" ]]; then
+            if [[ "$JOB_LOG" != "Log unavailable" ]] && [[ ${#JOB_LOG} -gt 100 ]]; then
               # Count critical error patterns (excluding compiler flags, echo statements, and other false positives)  
               ERROR_COUNT=$(echo "$JOB_LOG" | grep -vE "(\-Werror|\-Wall|\-Wno\-|gcc.*\-W|echo.*ERROR|RUN set.*ERROR)" | grep -ciE "(FATAL|CRITICAL|make:.*Error|ERROR.*failed|FAILED.*error|Build failed|compilation.*failed|configure.*failed|Connection.*failed|server.*terminated abnormally)" 2>/dev/null || echo "0")
               ERROR_COUNT=$(echo "$ERROR_COUNT" | tr -d '\n\r' | xargs)
@@ -641,14 +590,33 @@ jobs:
               else
                 TEST_STATUS="🔍⏸️ $JOB_CONCLUSION"
               fi
+            else
+              # Log unavailable or too short (likely from cache)
+              ERROR_COUNT="N/A"
+              WARNING_COUNT="N/A" 
+              TEST_STATUS="🔍💾 Cache/No Log Analysis"
             fi
+            
+            # Get test mode and build type for this architecture
+            ARCH_REGRESSION_MODES='${{ env.ARCH_REGRESSION_MODES }}'
+            REGRESSION_MODE_EMOJIS='${{ env.REGRESSION_MODE_EMOJIS }}'
+            ARCH_NATIVE_BUILDS='${{ env.ARCH_NATIVE_BUILDS }}'
+            BUILD_TYPE_EMOJIS='${{ env.BUILD_TYPE_EMOJIS }}'
+            
+            regression_mode=$(echo "$ARCH_REGRESSION_MODES" | jq -r ".[\"$ARCH\"]")
+            regression_emoji=$(echo "$REGRESSION_MODE_EMOJIS" | jq -r ".[\"$regression_mode\"]")
+            build_type=$(echo "$ARCH_NATIVE_BUILDS" | jq -r ".[\"$ARCH\"]")
+            build_type_emoji=$(echo "$BUILD_TYPE_EMOJIS" | jq -r ".[\"$build_type\"]")
+            
+            TEST_MODE="$regression_emoji $regression_mode"
+            BUILD_TYPE_DISPLAY="$build_type_emoji $build_type"
             
             # Format log details link
             LOG_DETAILS="[View Logs](/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/$JOB_ID)"
             
-            echo "| $JOB_NAME | $IMAGE_DIR | $ARCH | $ERROR_COUNT | $WARNING_COUNT | $TEST_STATUS | $LOG_DETAILS |" >> $GITHUB_STEP_SUMMARY
+            echo "| $IMAGE_DIR | $ARCH | $TEST_MODE | $BUILD_TYPE_DISPLAY | $ERROR_COUNT | $WARNING_COUNT | $TEST_STATUS | $LOG_DETAILS |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| $JOB_NAME | $IMAGE_DIR | $ARCH | - | - | 🔍⏸️ $JOB_STATUS | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| $IMAGE_DIR | $ARCH | - | - | - | - | 🔍⏸️ $JOB_STATUS | - |" >> $GITHUB_STEP_SUMMARY
           fi
         done
 
