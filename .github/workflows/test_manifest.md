@@ -237,11 +237,62 @@ The summary includes a table showing the status of regression tests for each arc
 |--------|-------|---------|-----------|
 | `⏭️ Skipped` | ⏭️ | Tests were skipped | `skip` mode |
 | `✅ Passed (Required)` | ✅ | Required tests passed | `require` mode success |
-| `🔍 Completed (Non-blocking)` | 🔍 | Standard tests completed | `test` mode (any outcome) |
-| `🔍🐢 Completed (No-JIT, Non-blocking)` | 🔍🐢 | No-JIT tests completed | `test_nojit` mode (any outcome) |
+| `🔍✅ Completed (Tests Passed)` | 🔍✅ | Standard tests passed | `test` mode success |
+| `🔍🐢✅ Completed (No-JIT Tests Passed)` | 🔍🐢✅ | No-JIT tests passed | `test_nojit` mode success |
 | `❌ Failed (Build Stopped)` | ❌ | Required tests failed | `require` mode failure |
 | `⚠️ Build Failed` | ⚠️ | Build error occurred | Non-require mode failures |
 | `⏸️ {status}` | ⏸️ | Other status | Cancelled, skipped, etc. |
+
+### Detailed Job Log Analysis
+
+The workflow now includes comprehensive job log analysis that examines complete build logs (not just regression test logs) to provide detailed insights:
+
+#### Log Analysis Features
+
+| Feature | Description | Implementation |
+|---------|-------------|----------------|
+| **Error Counting** | Counts all error patterns in complete job logs | Pattern matching for: `error:`, `failed`, `ERROR`, `FAILED`, `Exit code [1-9]`, `returned non-zero`, `Build failed` |
+| **Warning Counting** | Counts all warning patterns in complete job logs | Pattern matching for: `warning:`, `WARN`, `WARNING`, `deprecated` |
+| **Test Result Analysis** | Determines specific test outcomes from log content | Analyzes regression test patterns and job conclusions |
+| **Direct Log Access** | Provides clickable links to complete job logs | GitHub Actions job log URLs for detailed debugging |
+
+#### Enhanced Test Result Status
+
+The detailed analysis provides more granular test result status:
+
+| Status | Emoji | Meaning | Detection Logic |
+|--------|-------|---------|--------------| 
+| `🔍✅ Tests Passed` | 🔍✅ | Tests completed successfully | Job success + regression test pass patterns |
+| `🔍⚠️ Tests Failed (Non-blocking)` | 🔍⚠️ | Tests failed but build continued | Job success + `REGRESSION_TESTS_FAILED_EXIT_CODE` pattern |
+| `🔍❌ Tests Error` | 🔍❌ | Test execution errors | Job failure + test/regression failure patterns |
+| `🔍❌ Build Error` | 🔍❌ | Build compilation/setup errors | Job failure + general error patterns |
+| `🔍✅ Build Success` | 🔍✅ | Build successful, tests not detected | Job success without specific test patterns |
+| `🔍⏸️ {status}` | 🔍⏸️ | Other job status | Cancelled, skipped, in progress, etc. |
+| `🔍❓ Unknown` | 🔍❓ | Status could not be determined | Log unavailable or parsing errors |
+
+#### Detailed Analysis Table
+
+The summary includes a comprehensive analysis table:
+
+```markdown
+### Detailed Job Log Analysis
+
+| Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |
+|-----|-----------------|--------------|--------|----------|-------------|-------------|
+| 💻amd64\|🔒17-3.5/alpine3.22⚡ | 17-3.5/alpine3.22 | amd64 | 0 | 5 | 🔍✅ Tests Passed | [View Logs](link) |
+| 💪arm64\|🔒18-3.5/bookworm⚡ | 18-3.5/bookworm | arm64 | 0 | 3 | 🔍✅ Tests Passed | [View Logs](link) |
+| 🦾armv6\|🔍18-3.6/alpine3.22🔄 | 18-3.6/alpine3.22 | armv6 | 2 | 12 | 🔍⚠️ Tests Failed (Non-blocking) | [View Logs](link) |
+| 🧩riscv64\|🔍🐢17-3.5/alpine3.22🔄 | 17-3.5/alpine3.22 | riscv64 | 1 | 8 | 🔍✅ Build Success | [View Logs](link) |
+```
+
+#### Benefits of Detailed Analysis
+
+- **Complete Coverage**: Analyzes entire job logs, not just regression test outputs
+- **Error Quantification**: Provides exact counts of errors and warnings for debugging
+- **Granular Status**: Distinguishes between test failures, build errors, and success states  
+- **Direct Access**: Clickable links to complete job logs for detailed investigation
+- **Historical Tracking**: Persistent analysis results in GitHub Actions summaries
+- **Debugging Aid**: Quickly identify which jobs need attention and why
 
 ### Example Summary Table
 

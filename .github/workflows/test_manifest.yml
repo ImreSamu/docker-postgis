@@ -155,7 +155,7 @@ env:
   }'
 
   # Define image directories to build - automatically updated by tools/apply-ci.sh
-  IMAGE_DIRECTORIES: '["17-3.5/alpine3.22"]'  # multi-arch-include: change here for testing
+  IMAGE_DIRECTORIES: '["17-3.5/alpine3.22", "18-3.6/alpine3.22"]'  # multi-arch-include: change here for testing
 
 jobs:
   prepare-matrix:
@@ -455,6 +455,8 @@ jobs:
 
     steps:
     - name: Generate summary
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
         ## Multi-Architecture Docker Build Summary
@@ -532,9 +534,9 @@ jobs:
               elif [[ "$regression_mode" == "require" ]]; then
                 result_status="✅ Passed (Required)"
               elif [[ "$regression_mode" == "test" ]]; then
-                result_status="🔍 Completed (Non-blocking)"
+                result_status="🔍✅ Completed (Tests Passed)"
               elif [[ "$regression_mode" == "test_nojit" ]]; then
-                result_status="🔍🐢 Completed (No-JIT, Non-blocking)"
+                result_status="🔍🐢✅ Completed (No-JIT Tests Passed)"
               else
                 result_status="❓ Unknown"
               fi
@@ -550,6 +552,109 @@ jobs:
             
             echo "| $image_dir | $arch_emoji $arch | $regression_emoji $regression_mode | $build_type_emoji $build_type | $result_status |" >> $GITHUB_STEP_SUMMARY
           done
+        done
+
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+
+        ### Detailed Job Log Analysis
+
+        | Job | Image Directory | Architecture | Errors | Warnings | Test Result | Log Details |
+        |-----|-----------------|--------------|--------|----------|-------------|-------------|
+        EOF
+
+    - name: Analyze complete job results
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        echo "Analyzing complete job logs for detailed error and warning counts..."
+        
+        # Get job details for this workflow run
+        JOBS_JSON=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[]')
+        
+        # Process each build job
+        echo "$JOBS_JSON" | jq -c 'select(.name | contains("build-images") or test("💻|💪|🦾|🤖|🖥️|🎯|⚡|🧩|🏢"))' | while read -r job; do
+          JOB_ID=$(echo "$job" | jq -r '.id')
+          JOB_NAME=$(echo "$job" | jq -r '.name')
+          JOB_STATUS=$(echo "$job" | jq -r '.status')
+          JOB_CONCLUSION=$(echo "$job" | jq -r '.conclusion // "in_progress"')
+          
+          # Extract architecture and image directory from job name
+          # Job name format: {arch_emoji}{arch_name}|{regression_emoji}{image_dir}{build_type_emoji}
+          ARCH=""
+          IMAGE_DIR=""
+          
+          if [[ "$JOB_NAME" =~ 💻 ]]; then ARCH="amd64"
+          elif [[ "$JOB_NAME" =~ 💪 ]]; then ARCH="arm64"
+          elif [[ "$JOB_NAME" =~ 🦾 ]]; then ARCH="armv6"
+          elif [[ "$JOB_NAME" =~ 🤖 ]]; then ARCH="armv7"
+          elif [[ "$JOB_NAME" =~ 🖥️ ]]; then ARCH="386"
+          elif [[ "$JOB_NAME" =~ 🎯 ]]; then ARCH="mips64le"
+          elif [[ "$JOB_NAME" =~ ⚡ ]]; then ARCH="ppc64le"
+          elif [[ "$JOB_NAME" =~ 🧩 ]]; then ARCH="riscv64"
+          elif [[ "$JOB_NAME" =~ 🏢 ]]; then ARCH="s390x"
+          else ARCH="unknown"
+          fi
+          
+          # Extract image directory from job name (after | and before final emoji)
+          if [[ "$JOB_NAME" =~ \|[🔒🔍💨🐢]+([^⚡🔄]+)[⚡🔄] ]]; then
+            IMAGE_DIR="${BASH_REMATCH[1]}"
+          elif [[ "$JOB_NAME" =~ \|[🔒🔍💨🐢]+([^⚡🔄]+)$ ]]; then
+            IMAGE_DIR="${BASH_REMATCH[1]}"
+          else
+            # Fallback: try to extract any path-like pattern from job name
+            if [[ "$JOB_NAME" =~ ([0-9]+-[0-9]\.[0-9]/[a-zA-Z0-9\.]+) ]]; then
+              IMAGE_DIR="${BASH_REMATCH[1]}"
+            else
+              IMAGE_DIR="unknown"
+            fi
+          fi
+
+          if [[ "$JOB_STATUS" == "completed" ]]; then
+            echo "Analyzing job $JOB_ID ($ARCH)..."
+            
+            # Get job logs
+            JOB_LOG=$(gh api repos/${{ github.repository }}/actions/jobs/$JOB_ID/logs 2>/dev/null || echo "Log unavailable")
+            
+            # Count errors and warnings in the logs
+            ERROR_COUNT=0
+            WARNING_COUNT=0
+            TEST_STATUS="🔍❓ Unknown"
+            
+            if [[ "$JOB_LOG" != "Log unavailable" ]]; then
+              # Count various error patterns
+              ERROR_COUNT=$(echo "$JOB_LOG" | grep -ciE "(error:|failed|ERROR|FAILED|Exit code [1-9]|returned non-zero|Build failed)" || echo "0")
+              
+              # Count warning patterns  
+              WARNING_COUNT=$(echo "$JOB_LOG" | grep -ciE "(warning:|WARN|WARNING|deprecated)" || echo "0")
+              
+              # Determine test result based on log content and job conclusion
+              if [[ "$JOB_CONCLUSION" == "success" ]]; then
+                if echo "$JOB_LOG" | grep -qi "regression.*pass\|All tests passed\|CHECK passed"; then
+                  TEST_STATUS="🔍✅ Tests Passed"
+                elif echo "$JOB_LOG" | grep -qi "REGRESSION_TESTS_FAILED_EXIT_CODE"; then
+                  TEST_STATUS="🔍⚠️ Tests Failed (Non-blocking)"
+                else
+                  TEST_STATUS="🔍✅ Build Success"
+                fi
+              elif [[ "$JOB_CONCLUSION" == "failure" ]]; then
+                if echo "$JOB_LOG" | grep -qi "regression.*fail\|test.*fail"; then
+                  TEST_STATUS="🔍❌ Tests Error"
+                else
+                  TEST_STATUS="🔍❌ Build Error"
+                fi
+              else
+                TEST_STATUS="🔍⏸️ $JOB_CONCLUSION"
+              fi
+            fi
+            
+            # Format log details link
+            LOG_DETAILS="[View Logs](/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/$JOB_ID)"
+            
+            echo "| $JOB_NAME | $IMAGE_DIR | $ARCH | $ERROR_COUNT | $WARNING_COUNT | $TEST_STATUS | $LOG_DETAILS |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| $JOB_NAME | $IMAGE_DIR | $ARCH | - | - | 🔍⏸️ $JOB_STATUS | - |" >> $GITHUB_STEP_SUMMARY
+          fi
         done
 
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
