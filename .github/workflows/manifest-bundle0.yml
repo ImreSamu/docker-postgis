@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Multi-Architecture Docker Manifest (Bundle0)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - manifest  # Change to 'master' for production, 'manifest' for testing
+    paths:
+      - '.github/workflows/manifest-bundle0.yml'
+      - '.github/workflows/build-manifest-template.yml'
+#multi-arch-paths-start
+      - '16-3.5/bookworm/**'
+      - '17-3.5/bookworm/**'
+      - '16-3.5-bundle0/bookworm/**'
+      - '17-3.5-bundle0/bookworm/**'
+#multi-arch-paths-end
+  pull_request:
+    paths:
+      - '.github/workflows/manifest-bundle0.yml'
+      - '.github/workflows/build-manifest-template.yml'
+#multi-arch-paths-start
+      - '16-3.5/bookworm/**'
+      - '17-3.5/bookworm/**'
+      - '16-3.5-bundle0/bookworm/**'
+      - '17-3.5-bundle0/bookworm/**'
+#multi-arch-paths-end
+
+jobs:
+  # Step 1: Build base images first
+  build-base:
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Bundle0-Base"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["16-3.5/bookworm", "17-3.5/bookworm"]'
+      target_branch: "manifest"  # Change to 'master' for production, 'manifest' for testing
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 2: Build bundle0 images (depends on base images)
+  build-bundle0:
+    needs: build-base
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Bundle0"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["16-3.5-bundle0/bookworm", "17-3.5-bundle0/bookworm"]'
+      target_branch: "manifest"  # Change to 'master' for production, 'manifest' for testing
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}

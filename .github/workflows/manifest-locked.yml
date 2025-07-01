@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Multi-Architecture Docker Manifest (Locked)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - manifest  # Change to 'master' for production, 'manifest' for testing
+    paths:
+      - '.github/workflows/manifest-locked.yml'
+      - '.github/workflows/build-manifest-template.yml'
+#multi-arch-paths-start
+      - '14-l3.1.9gcp/bookworm/**'
+#multi-arch-paths-end
+  pull_request:
+    paths:
+      - '.github/workflows/manifest-locked.yml'
+      - '.github/workflows/build-manifest-template.yml'
+#multi-arch-paths-start
+      - '14-l3.1.9gcp/bookworm/**'
+#multi-arch-paths-end
+
+jobs:
+  build-locked:
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Locked"
+      supported_architectures: '["amd64"]'
+      image_directories: '["14-l3.1.9gcp/bookworm"]'
+      target_branch: "manifest"  # Change to 'master' for production, 'manifest' for testing
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}

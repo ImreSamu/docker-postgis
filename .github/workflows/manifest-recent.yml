@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Multi-Architecture Docker Manifest (Alpine)
+name: Multi-Architecture Docker Manifest (Recent)
 
 on:
   workflow_dispatch:
@@ -7,28 +7,30 @@ on:
     branches:
       - manifest  # Change to 'master' for production, 'manifest' for testing
     paths:
-      - '.github/workflows/manifest-alpine.yml'
+      - '.github/workflows/manifest-recent.yml'
       - '.github/workflows/build-manifest-template.yml'
 #multi-arch-paths-start
-      - '17-3.5/alpine3.22/**'
-      - '18-3.6/alpine3.22/**'
+      - '16-recent/bookworm/**'
+      - '17-recent/bookworm/**'
+      - '18-recent/bookworm/**'
 #multi-arch-paths-end
   pull_request:
     paths:
-      - '.github/workflows/manifest-alpine.yml'
+      - '.github/workflows/manifest-recent.yml'
       - '.github/workflows/build-manifest-template.yml'
 #multi-arch-paths-start
-      - '17-3.5/alpine3.22/**'
-      - '18-3.6/alpine3.22/**'
+      - '16-recent/bookworm/**'
+      - '17-recent/bookworm/**'
+      - '18-recent/bookworm/**'
 #multi-arch-paths-end
 
 jobs:
-  build-alpine:
+  build-recent:
     uses: ./.github/workflows/build-manifest-template.yml
     with:
-      workflow_name: "Alpine"
-      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]'
-      image_directories: '["17-3.5/alpine3.22", "18-3.6/alpine3.22"]'
+      workflow_name: "Recent"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["16-recent/bookworm", "17-recent/bookworm", "18-recent/bookworm"]'
       target_branch: "manifest"  # Change to 'master' for production, 'manifest' for testing
       registry: "docker.io"
       repo_name: "imresamu"
