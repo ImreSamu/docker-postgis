@@ -1,10 +1,8 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Multi-Architecture Docker Manifest Build Template
 
-# Global concurrency across all template usage - ensures only one template instance runs at a time
-concurrency:
-  group: docker-manifest-build-template
-  cancel-in-progress: false
+# Concurrency removed - let groups run in parallel with explicit dependencies
+# Resource protection handled by max-parallel limits within each template call
 
 on:
   workflow_call:

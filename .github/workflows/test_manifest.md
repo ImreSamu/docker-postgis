@@ -513,7 +513,7 @@ Starting with the latest implementation, the workflow system has been refactored
 - **`build-manifest-template.yml`**: Reusable workflow template containing all build logic
 - **Input Parameters**: Configurable workflow name, architectures, image directories, registry settings
 - **Shared Functionality**: All build, test, manifest creation, and log analysis logic
-- **Concurrency Control**: Only one instance runs at a time across all workflows (`cancel-in-progress: false`)
+- **Parallel Execution**: Groups can run simultaneously with internal max-parallel limits for resource protection
 
 #### Group-Based Workflows
 
@@ -561,16 +561,16 @@ The workflow system is organized into 3 logical groups with explicit step depend
 4. **Flexible Configuration**: Each step can have different architectures and directories
 5. **Scalable**: Easy to add new groups or steps within groups
 6. **Execution Control**: Explicit step dependencies with guaranteed execution order
-7. **Concurrency Protection**: Template runs only one instance at a time globally
-8. **Resource Optimization**: Maximum 3 parallel workflow groups (Alpine, Debian, Other)
+7. **Resource Protection**: max-parallel limits within each template call prevent overload
+8. **Parallel Groups**: All 3 workflow groups (Alpine, Debian, Other) can run simultaneously
 
 #### Execution Model
 
 **Group-Based Execution** with explicit dependencies:
 - **3 Parallel Groups**: Alpine, Debian, and Other groups can run simultaneously
 - **Sequential Steps**: Within each group, steps run sequentially with explicit `needs` dependencies
-- **Template Concurrency**: Global concurrency ensures only one template instance runs at a time
-- **Automatic Queuing**: Template calls are automatically queued when multiple groups run simultaneously
+- **No Global Concurrency**: Groups run in parallel without cancellation issues
+- **Resource Protection**: `max-parallel: 6` within each template call prevents resource overload
 - **Guaranteed Order**: Dependencies ensure proper build order (e.g., Bundle0-Base before Bundle0-Images)
 
 #### Usage Pattern
