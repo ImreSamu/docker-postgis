@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Multi-Architecture Docker Manifest (Alpine 2-Arch)
+name: Alpine | Docker Multi-Arch Build Group
 
 on:
   workflow_dispatch:
@@ -7,9 +7,17 @@ on:
     branches:
       - manifest  # Change to 'master' for production, 'manifest' for testing
     paths:
-      - '.github/workflows/manifest-alpine-2arch.yml'
+      - '.github/workflows/manifest-alpine.yml'
       - '.github/workflows/build-manifest-template.yml'
 #multi-arch-paths-start
+      # Alpine-8Arch paths
+      - '13-3.5/alpine3.22/**'
+      - '14-3.5/alpine3.22/**'
+      - '15-3.5/alpine3.22/**'
+      - '16-3.5/alpine3.22/**'
+      - '17-3.5/alpine3.22/**'
+      - '18-3.5/alpine3.22/**'
+      # Alpine-2Arch paths
       - '13-3.4/alpine3.22/**'
       - '14-3.4/alpine3.22/**'
       - '15-3.4/alpine3.22/**'
@@ -34,9 +42,17 @@ on:
 #multi-arch-paths-end
   pull_request:
     paths:
-      - '.github/workflows/manifest-alpine-2arch.yml'
+      - '.github/workflows/manifest-alpine.yml'
       - '.github/workflows/build-manifest-template.yml'
 #multi-arch-paths-start
+      # Alpine-8Arch paths
+      - '13-3.5/alpine3.22/**'
+      - '14-3.5/alpine3.22/**'
+      - '15-3.5/alpine3.22/**'
+      - '16-3.5/alpine3.22/**'
+      - '17-3.5/alpine3.22/**'
+      - '18-3.5/alpine3.22/**'
+      # Alpine-2Arch paths
       - '13-3.4/alpine3.22/**'
       - '14-3.4/alpine3.22/**'
       - '15-3.4/alpine3.22/**'
@@ -61,13 +77,30 @@ on:
 #multi-arch-paths-end
 
 jobs:
-  build-alpine-2arch:
+  # Step 1: Alpine-8Arch (8 architectures, 6 directories)
+  alpine-8arch:
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Alpine-8Arch"
+      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]'
+      image_directories: '["13-3.5/alpine3.22", "14-3.5/alpine3.22", "15-3.5/alpine3.22", "16-3.5/alpine3.22", "17-3.5/alpine3.22", "18-3.5/alpine3.22"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 2: Alpine-2Arch (2 architectures, 21 directories) - waits for 8Arch
+  alpine-2arch:
+    needs: alpine-8arch
     uses: ./.github/workflows/build-manifest-template.yml
     with:
       workflow_name: "Alpine-2Arch"
       supported_architectures: '["amd64", "arm64"]'
       image_directories: '["13-3.4/alpine3.22", "14-3.4/alpine3.22", "15-3.4/alpine3.22", "16-3.4/alpine3.22", "17-3.4/alpine3.22", "17-3.6/alpine3.22", "18-3.6/alpine3.22", "13-3.3/alpine3.21", "13-3.4/alpine3.21", "13-3.5/alpine3.21", "14-3.3/alpine3.21", "14-3.4/alpine3.21", "14-3.5/alpine3.21", "15-3.3/alpine3.21", "15-3.4/alpine3.21", "15-3.5/alpine3.21", "16-3.3/alpine3.21", "16-3.4/alpine3.21", "16-3.5/alpine3.21", "17-3.4/alpine3.21", "17-3.5/alpine3.21"]'
-      target_branch: "manifest"  # Change to 'master' for production, 'manifest' for testing
+      target_branch: "manifest"
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"

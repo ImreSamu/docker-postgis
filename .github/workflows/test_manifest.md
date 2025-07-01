@@ -515,49 +515,42 @@ Starting with the latest implementation, the workflow system has been refactored
 - **Shared Functionality**: All build, test, manifest creation, and log analysis logic
 - **Concurrency Control**: Only one instance runs at a time across all workflows (`cancel-in-progress: false`)
 
-#### Variant-Specific Workflows
+#### Group-Based Workflows
 
-- **`manifest-alpine-8arch.yml`**: Alpine-based builds with full architecture support
+The workflow system is organized into 3 logical groups with explicit step dependencies:
+
+##### **🏔️ `manifest-alpine.yml`** - Alpine Build Group
+- **Step 1: Alpine-8Arch** 
   - Architectures: `["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]` (8 architectures)
   - Image Directories: `["13-3.5/alpine3.22", "14-3.5/alpine3.22", "15-3.5/alpine3.22", "16-3.5/alpine3.22", "17-3.5/alpine3.22", "18-3.5/alpine3.22"]`
-  - Execution: Auto-queued by template concurrency
-
-- **`manifest-alpine-2arch.yml`**: Alpine-based builds with production architectures
+- **Step 2: Alpine-2Arch** (`needs: alpine-8arch`)
   - Architectures: `["amd64", "arm64"]` (2 production architectures)
   - Image Directories: Alpine 3.22 (3.4, 3.6 versions) + Alpine 3.21 (all 3.3, 3.4, 3.5 versions) - 21 directories total
-  - Execution: Auto-queued by template concurrency
 
-- **`manifest-bookworm.yml`**: Bookworm-based builds with production architectures
-  - Architectures: `["amd64", "arm64"]` (production architectures only)
-  - Image Directories: `["13-3.5/bookworm", "14-3.5/bookworm", "15-3.5/bookworm", "18-3.5/bookworm"]` (16-3.5, 17-3.5 moved to Bundle0)
-  - Execution: Auto-queued by template concurrency
-
-- **`manifest-bullseye.yml`**: Bullseye-based builds with production architectures
-  - Architectures: `["amd64", "arm64"]` (production architectures only)
-  - Image Directories: `["13-3.5/bullseye", "14-3.5/bullseye", "15-3.5/bullseye", "16-3.5/bullseye", "17-3.5/bullseye"]`
-  - Execution: Auto-queued by template concurrency
-
-- **`manifest-recent.yml`**: Recent Debian builds with production architectures
-  - Architectures: `["amd64", "arm64"]` (production architectures only)
-  - Image Directories: `["16-recent/bookworm", "17-recent/bookworm", "18-recent/bookworm"]`
-  - Execution: Auto-queued by template concurrency
-
-- **`manifest-master.yml`**: Master Debian builds with production architectures
-  - Architectures: `["amd64", "arm64"]` (production architectures only)
-  - Image Directories: `["16-master/bookworm", "17-master/bookworm", "18-master/bookworm"]`
-  - Execution: Auto-queued by template concurrency
-
-- **`manifest-locked.yml`**: Locked version builds for specific use cases
-  - Architectures: `["amd64"]` (single architecture only)
-  - Image Directories: `["14-l3.1.9gcp/bookworm"]`
-  - Execution: Auto-queued by template concurrency
-
-- **`manifest-bundle0.yml`**: Two-step Bundle0 builds (self-contained with dependencies)
+##### **📦 `manifest-debian.yml`** - Debian Build Group
+- **Step 1: Bookworm**
   - Architectures: `["amd64", "arm64"]` (production architectures)
-  - **Step 1**: Base images `["16-3.5/bookworm", "17-3.5/bookworm"]` (moved from manifest-bookworm.yml)
-  - **Step 2**: Bundle0 images `["16-3.5-bundle0/bookworm", "17-3.5-bundle0/bookworm"]` (needs Step 1)
-  - Execution: Auto-queued by template concurrency with explicit `needs` dependency between steps
-  - Self-contained: No external dependencies on other workflows
+  - Image Directories: `["13-3.5/bookworm", "14-3.5/bookworm", "15-3.5/bookworm", "18-3.5/bookworm"]`
+- **Step 2: Bundle0-Base** (`needs: bookworm`)
+  - Architectures: `["amd64", "arm64"]` (production architectures)
+  - Image Directories: `["16-3.5/bookworm", "17-3.5/bookworm"]`
+- **Step 3: Bundle0-Images** (`needs: bundle0-base`)
+  - Architectures: `["amd64", "arm64"]` (production architectures)
+  - Image Directories: `["16-3.5-bundle0/bookworm", "17-3.5-bundle0/bookworm"]`
+- **Step 4: Bullseye** (`needs: bundle0-images`)
+  - Architectures: `["amd64", "arm64"]` (production architectures)
+  - Image Directories: `["13-3.5/bullseye", "14-3.5/bullseye", "15-3.5/bullseye", "16-3.5/bullseye", "17-3.5/bullseye"]`
+
+##### **🔧 `manifest-other.yml`** - Other Build Group
+- **Step 1: Locked**
+  - Architectures: `["amd64"]` (single architecture)
+  - Image Directories: `["14-l3.1.9gcp/bookworm"]`
+- **Step 2: Master** (`needs: locked`)
+  - Architectures: `["amd64", "arm64"]` (production architectures)
+  - Image Directories: `["16-master/bookworm", "17-master/bookworm", "18-master/bookworm"]`
+- **Step 3: Recent** (`needs: master`)
+  - Architectures: `["amd64", "arm64"]` (production architectures)
+  - Image Directories: `["16-recent/bookworm", "17-recent/bookworm", "18-recent/bookworm"]`
 
 
 #### Benefits of Template System
@@ -565,19 +558,20 @@ Starting with the latest implementation, the workflow system has been refactored
 1. **Code Reuse**: Single source of truth for build logic
 2. **Consistent Behavior**: All variants use identical build processes
 3. **Easy Maintenance**: Updates to core logic apply to all variants
-4. **Flexible Configuration**: Each variant can have different architectures and directories
-5. **Scalable**: Easy to add new variants (Ubuntu, Rocky Linux, etc.)
-6. **Execution Control**: Choose parallel or sequential execution based on needs
-7. **Concurrency Protection**: Template runs only one instance at a time, preventing resource conflicts
+4. **Flexible Configuration**: Each step can have different architectures and directories
+5. **Scalable**: Easy to add new groups or steps within groups
+6. **Execution Control**: Explicit step dependencies with guaranteed execution order
+7. **Concurrency Protection**: Template runs only one instance at a time globally
+8. **Resource Optimization**: Maximum 3 parallel workflow groups (Alpine, Debian, Other)
 
 #### Execution Model
 
-**Auto-Queued Execution** (All variant workflows):
-- **Template Concurrency**: Only one template instance runs at a time
-- **Automatic Queuing**: Multiple workflow triggers are automatically queued
-- **Independent Triggers**: Each variant can be triggered independently
-- **Sequential Execution**: Despite parallel triggers, runs execute sequentially due to concurrency control
-- **Simplified Management**: No need for explicit `needs` dependencies between variants
+**Group-Based Execution** with explicit dependencies:
+- **3 Parallel Groups**: Alpine, Debian, and Other groups can run simultaneously
+- **Sequential Steps**: Within each group, steps run sequentially with explicit `needs` dependencies
+- **Template Concurrency**: Global concurrency ensures only one template instance runs at a time
+- **Automatic Queuing**: Template calls are automatically queued when multiple groups run simultaneously
+- **Guaranteed Order**: Dependencies ensure proper build order (e.g., Bundle0-Base before Bundle0-Images)
 
 #### Usage Pattern
 

@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Multi-Architecture Docker Manifest Build Template
 
-# Ensure only one instance of this template runs at a time across all workflows
+# Global concurrency across all template usage - ensures only one template instance runs at a time
 concurrency:
   group: docker-manifest-build-template
   cancel-in-progress: false
@@ -282,7 +282,7 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 6
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
 
     steps:

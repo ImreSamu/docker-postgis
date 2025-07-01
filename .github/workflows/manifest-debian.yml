@@ -1,0 +1,114 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Debian | Docker Multi-Arch Build Group
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - manifest  # Change to 'master' for production, 'manifest' for testing
+    paths:
+      - '.github/workflows/manifest-debian.yml'
+      - '.github/workflows/build-manifest-template.yml'
+#multi-arch-paths-start
+      # Bookworm paths
+      - '13-3.5/bookworm/**'
+      - '14-3.5/bookworm/**'
+      - '15-3.5/bookworm/**'
+      - '18-3.5/bookworm/**'
+      # Bundle0 paths
+      - '16-3.5/bookworm/**'
+      - '17-3.5/bookworm/**'
+      - '16-3.5-bundle0/bookworm/**'
+      - '17-3.5-bundle0/bookworm/**'
+      # Bullseye paths
+      - '13-3.5/bullseye/**'
+      - '14-3.5/bullseye/**'
+      - '15-3.5/bullseye/**'
+      - '16-3.5/bullseye/**'
+      - '17-3.5/bullseye/**'
+#multi-arch-paths-end
+  pull_request:
+    paths:
+      - '.github/workflows/manifest-debian.yml'
+      - '.github/workflows/build-manifest-template.yml'
+#multi-arch-paths-start
+      # Bookworm paths
+      - '13-3.5/bookworm/**'
+      - '14-3.5/bookworm/**'
+      - '15-3.5/bookworm/**'
+      - '18-3.5/bookworm/**'
+      # Bundle0 paths
+      - '16-3.5/bookworm/**'
+      - '17-3.5/bookworm/**'
+      - '16-3.5-bundle0/bookworm/**'
+      - '17-3.5-bundle0/bookworm/**'
+      # Bullseye paths
+      - '13-3.5/bullseye/**'
+      - '14-3.5/bullseye/**'
+      - '15-3.5/bullseye/**'
+      - '16-3.5/bullseye/**'
+      - '17-3.5/bullseye/**'
+#multi-arch-paths-end
+
+jobs:
+  # Step 1: Bookworm (4 directories)
+  bookworm:
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Bookworm"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["13-3.5/bookworm", "14-3.5/bookworm", "15-3.5/bookworm", "18-3.5/bookworm"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 2: Bundle0 (2-step process: base + bundle) - waits for Bookworm
+  bundle0-base:
+    needs: bookworm
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Bundle0-Base"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["16-3.5/bookworm", "17-3.5/bookworm"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  bundle0-images:
+    needs: bundle0-base
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Bundle0"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["16-3.5-bundle0/bookworm", "17-3.5-bundle0/bookworm"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 3: Bullseye (5 directories) - waits for Bundle0
+  bullseye:
+    needs: bundle0-images
+    uses: ./.github/workflows/build-manifest-template.yml
+    with:
+      workflow_name: "Bullseye"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["13-3.5/bullseye", "14-3.5/bullseye", "15-3.5/bullseye", "16-3.5/bullseye", "17-3.5/bullseye"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
