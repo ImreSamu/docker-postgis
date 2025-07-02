@@ -122,8 +122,8 @@ env:
   ARCH_REGRESSION_MODES: '{
     "amd64":    "require",
     "arm64":    "require",
-    "armv6":    "test",
-    "armv7":    "test",
+    "armv6":    "test_nojit",
+    "armv7":    "test_nojit",
     "386":      "test",
     "mips64le": "skip",
     "ppc64le":  "skip",
@@ -381,7 +381,7 @@ jobs:
         FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
         TEST_IMAGE="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${FIRST_TAG}"
 
-        echo "Testing natively for ${{ matrix.target }}"
+        echo "Testing for ${{ matrix.target }} (build type: ${{ matrix.build_type_emoji }})"
 
         git clone --depth 1 https://github.com/docker-library/official-images.git
 
@@ -389,6 +389,28 @@ jobs:
         [[ -f "./test/postgis-config.sh" ]] || { echo "./test/postgis-config.sh not found"; exit 1; }
         [[ -f "./official-images/test/config.sh" ]] || { echo "./official-images/test/config.sh not found"; exit 1; }
 
+        # For QEMU builds (🔄), add platform specification to avoid exec format errors
+        if [[ "${{ matrix.build_type_emoji }}" == "🔄" ]]; then
+          echo "QEMU build detected - testing with explicit platform"
+          export DOCKER_DEFAULT_PLATFORM="${{ matrix.target }}"
+          echo "Set DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM"
+          
+          # Quick platform test
+          docker run --rm --platform ${{ matrix.target }} "$TEST_IMAGE" echo "Platform test successful" || {
+            echo "Platform test failed, but continuing with official tests"
+          }
+        else
+          echo "Native build detected - testing without platform override"
+        fi
+
+        # Create architecture-specific test configuration
+        # The postgis-config.sh script uses IMAGE_NAME to build test keys, but we need
+        # the key to match our actual image name with architecture suffix
+        export REGISTRY="${{ env.REGISTRY }}"
+        export REPO_NAME="${{ env.REPO_NAME }}"
+        export IMAGE_NAME="${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}"
+        
+        # Run official test suite
         ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
 
     - name: Push Docker image

@@ -19,8 +19,8 @@ The workflow template supports these architectures with their corresponding conf
 |--------------|-------|--------|----------|-----------------|------------|--------------|-----|----------|
 | **amd64** | 💻 | ubuntu-24.04 | linux/amd64 | require 🔒 | native ⚡ | -O3 -Wall -fno-omit-frame-pointer | --enable-lto | Intel/AMD 64-bit (Production) |
 | **arm64** | 💪 | ubuntu-24.04-arm | linux/arm64 | require 🔒 | native ⚡ | -O3 -Wall -fno-omit-frame-pointer | --enable-lto | Apple Silicon, AWS Graviton (Production) |
-| **armv6** | 🦾 | ubuntu-24.04-arm | linux/arm/v6 | test 🔍 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Raspberry Pi Zero (Experimental) |
-| **armv7** | 🤖 | ubuntu-24.04-arm | linux/arm/v7 | test 🔍 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Raspberry Pi 2/3/4 (Experimental) |
+| **armv6** | 🦾 | ubuntu-24.04-arm | linux/arm/v6 | test_nojit 🔍🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Raspberry Pi Zero (JIT-incompatible) |
+| **armv7** | 🤖 | ubuntu-24.04-arm | linux/arm/v7 | test_nojit 🔍🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Raspberry Pi 2/3/4 (JIT-incompatible) |
 | **386** | 🖥️ | ubuntu-24.04 | linux/386 | test 🔍 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Legacy 32-bit Intel (Experimental) |
 | **mips64le** | 🎯 | ubuntu-24.04 | linux/mips64le | skip 💨 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | MIPS 64-bit systems (Skip Tests) |
 | **ppc64le** | ⚡ | ubuntu-24.04 | linux/ppc64le | skip 💨 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | IBM POWER systems (Skip Tests) |
@@ -95,13 +95,14 @@ The workflow supports four regression testing modes for PostGIS builds:
   - Native execution with JIT enabled
   - Maximum performance optimization (-O3)
 
-- **Experimental Architectures** (armv6, armv7, 386, ppc64le): Use `test` mode  
+- **Experimental Architectures** (386): Use `test` mode  
   - Tests run but build continues on failure
   - QEMU emulation with conservative optimization (-O1)
 
-- **JIT-Incompatible Architectures** (riscv64): Use `test_nojit` mode
+- **JIT-Incompatible Architectures** (armv6, armv7, riscv64): Use `test_nojit` mode
   - Tests run with JIT disabled for compatibility
   - PostgreSQL configuration modified to disable JIT by default
+  - ARM v6/v7 architectures often have JIT stability issues
 
 - **Problematic Architectures** (mips64le, s390x): Use `skip` mode
   - No regression tests for fastest builds
