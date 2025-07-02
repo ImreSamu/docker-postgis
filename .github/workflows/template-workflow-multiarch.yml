@@ -366,8 +366,8 @@ jobs:
         build-args: |
           BUILDKIT_INLINE_CACHE=1
           PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
-          PGIS1_OPTIMIZATION_FLAGS=${{ matrix.optimization_flags }}
-          PGIS1_LTO_FLAGS=${{ matrix.lto_flags }}
+          PGIS1_OPTIMIZATION_FLAGS="${{ matrix.optimization_flags }}"
+          PGIS1_LTO_FLAGS="${{ matrix.lto_flags }}"
           REGISTRY=${{ env.REGISTRY }}
           REPO_NAME=${{ env.REPO_NAME }}
           IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
@@ -410,8 +410,8 @@ jobs:
         export REPO_NAME="${{ env.REPO_NAME }}"
         export IMAGE_NAME="${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}"
         
-        # Run official test suite
-        ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
+        # Run official test suite with detailed debugging
+        bash -x ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
 
     - name: Push Docker image
       if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
