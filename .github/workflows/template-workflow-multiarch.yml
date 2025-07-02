@@ -251,6 +251,7 @@ jobs:
               --arg emoji "$emoji" \
               --arg regression_mode "$regression_mode" \
               --arg regression_emoji "$regression_emoji" \
+              --arg build_type "$build_type" \
               --arg build_type_emoji "$build_type_emoji" \
               --arg optimization_flags "$optimization_flags" \
               --arg lto_flags "$lto_flags" \
@@ -262,6 +263,7 @@ jobs:
                 arch_emoji: $emoji,
                 regression_mode: $regression_mode,
                 regression_emoji: $regression_emoji,
+                build_type: $build_type,
                 build_type_emoji: $build_type_emoji,
                 optimization_flags: $optimization_flags,
                 lto_flags: $lto_flags
@@ -288,6 +290,17 @@ jobs:
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
 
     steps:
+    - name: Debug - Check matrix variables
+      run: |
+        echo "=== Matrix Debug Information ==="
+        echo "Architecture: ${{ matrix.arch_variant }}"
+        echo "Build type: ${{ matrix.build_type }}"
+        echo "Target platform: ${{ matrix.target }}"
+        echo "Regression mode: ${{ matrix.regression_mode }}"
+        echo "Runner: ${{ matrix.runner }}"
+        echo "Should run QEMU setup: ${{ matrix.build_type == 'qemu' }}"
+        echo "================================"
+
     - name: Checkout source
       uses: actions/checkout@v4
 
@@ -395,13 +408,6 @@ jobs:
 
     - name: List docker images with architecture info
       run: ./tools/list-docker-images.sh postgistest
-
-    - name: Debug - Check matrix variables
-      run: |
-        echo "Architecture: ${{ matrix.arch_variant }}"
-        echo "Build type: ${{ matrix.build_type }}"
-        echo "Target platform: ${{ matrix.target }}"
-        echo "Should run QEMU setup: ${{ matrix.build_type == 'qemu' }}"
 
     - name: Ensure QEMU for testing
       if: ${{ matrix.build_type == 'qemu' }}
