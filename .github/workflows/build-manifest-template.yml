@@ -422,7 +422,7 @@ jobs:
             done
 
             docker buildx imagetools create -t "$MANIFEST_TAG" $SOURCE_TAGS
-            docker buildx imagetools inspect "$MANIFEST_TAG" | jq '.manifests[] | {platform: .platform, digest: .digest}'
+            docker buildx imagetools inspect "$MANIFEST_TAG"
           done
         done
 
