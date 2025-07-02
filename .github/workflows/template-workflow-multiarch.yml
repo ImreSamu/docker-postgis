@@ -401,19 +401,15 @@ jobs:
         [[ -f "./test/postgis-config.sh" ]] || { echo "./test/postgis-config.sh not found"; exit 1; }
         [[ -f "./official-images/test/config.sh" ]] || { echo "./official-images/test/config.sh not found"; exit 1; }
 
-        # For QEMU builds (🔄), add platform specification to avoid exec format errors
-        if [[ "${{ matrix.build_type_emoji }}" == "🔄" ]]; then
-          echo "QEMU build detected - testing with explicit platform"
-          export DOCKER_DEFAULT_PLATFORM="${{ matrix.target }}"
-          echo "Set DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM"
-          
-          # Quick platform test
-          docker run --rm --platform ${{ matrix.target }} "$SHORT_TEST_IMAGE" echo "Platform test successful" || {
-            echo "Platform test failed, but continuing with official tests"
-          }
-        else
-          echo "Native build detected - testing without platform override"
-        fi
+        # Set platform for all builds to ensure correct image resolution
+        echo "Setting platform for ${{ matrix.target }} (build type: ${{ matrix.build_type_emoji }})"
+        export DOCKER_DEFAULT_PLATFORM="${{ matrix.target }}"
+        echo "Set DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM"
+        
+        # Quick platform test for all architectures
+        docker run --rm --platform ${{ matrix.target }} "$SHORT_TEST_IMAGE" echo "Platform test successful" || {
+          echo "Platform test failed, but continuing with official tests"
+        }
 
         # Create test configuration for short image name
         export REGISTRY=""
