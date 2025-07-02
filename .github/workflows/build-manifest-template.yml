@@ -367,6 +367,9 @@ jobs:
           PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
           PGIS1_OPTIMIZATION_FLAGS=${{ matrix.optimization_flags }}
           PGIS1_LTO_FLAGS=${{ matrix.lto_flags }}
+          REGISTRY=${{ env.REGISTRY }}
+          REPO_NAME=${{ env.REPO_NAME }}
+          IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
 
     - name: List docker images
       run: docker images
