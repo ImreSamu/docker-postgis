@@ -1,0 +1,216 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Alpine | Docker Multi-Arch Build Workflow
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 2'  # Tuesday 02:00 UTC - Weekly Alpine builds
+  push:
+    branches:
+      - manifest  # Change to 'master' for production, 'manifest' for testing
+    paths:
+      - '.github/workflows/workflow-build-alpine.yml'
+      - '.github/workflows/template-workflow-multiarch.yml'
+#multi-arch-paths-start
+      # Alpine-8Arch paths
+      - '13-3.5/alpine3.22/**'
+      - '14-3.5/alpine3.22/**'
+      - '15-3.5/alpine3.22/**'
+      - '16-3.5/alpine3.22/**'
+      - '17-3.5/alpine3.22/**'
+      - '18-3.5/alpine3.22/**'
+      # Alpine-2Arch paths
+      - '13-3.4/alpine3.22/**'
+      - '14-3.4/alpine3.22/**'
+      - '15-3.4/alpine3.22/**'
+      - '16-3.4/alpine3.22/**'
+      - '17-3.4/alpine3.22/**'
+      - '17-3.6/alpine3.22/**'
+      - '18-3.6/alpine3.22/**'
+      - '13-3.3/alpine3.21/**'
+      - '13-3.4/alpine3.21/**'
+      - '13-3.5/alpine3.21/**'
+      - '14-3.3/alpine3.21/**'
+      - '14-3.4/alpine3.21/**'
+      - '14-3.5/alpine3.21/**'
+      - '15-3.3/alpine3.21/**'
+      - '15-3.4/alpine3.21/**'
+      - '15-3.5/alpine3.21/**'
+      - '16-3.3/alpine3.21/**'
+      - '16-3.4/alpine3.21/**'
+      - '16-3.5/alpine3.21/**'
+      - '17-3.4/alpine3.21/**'
+      - '17-3.5/alpine3.21/**'
+#multi-arch-paths-end
+  pull_request:
+    paths:
+      - '.github/workflows/workflow-build-alpine.yml'
+      - '.github/workflows/template-workflow-multiarch.yml'
+#multi-arch-paths-start
+      # Alpine-8Arch paths
+      - '13-3.5/alpine3.22/**'
+      - '14-3.5/alpine3.22/**'
+      - '15-3.5/alpine3.22/**'
+      - '16-3.5/alpine3.22/**'
+      - '17-3.5/alpine3.22/**'
+      - '18-3.5/alpine3.22/**'
+      # Alpine-2Arch paths
+      - '13-3.4/alpine3.22/**'
+      - '14-3.4/alpine3.22/**'
+      - '15-3.4/alpine3.22/**'
+      - '16-3.4/alpine3.22/**'
+      - '17-3.4/alpine3.22/**'
+      - '17-3.6/alpine3.22/**'
+      - '18-3.6/alpine3.22/**'
+      - '13-3.3/alpine3.21/**'
+      - '13-3.4/alpine3.21/**'
+      - '13-3.5/alpine3.21/**'
+      - '14-3.3/alpine3.21/**'
+      - '14-3.4/alpine3.21/**'
+      - '14-3.5/alpine3.21/**'
+      - '15-3.3/alpine3.21/**'
+      - '15-3.4/alpine3.21/**'
+      - '15-3.5/alpine3.21/**'
+      - '16-3.3/alpine3.21/**'
+      - '16-3.4/alpine3.21/**'
+      - '16-3.5/alpine3.21/**'
+      - '17-3.4/alpine3.21/**'
+      - '17-3.5/alpine3.21/**'
+#multi-arch-paths-end
+
+jobs:
+  # =============================================================================
+  # ALPINE MULTI-ARCHITECTURE BUILD PIPELINE (6 STEPS)
+  # =============================================================================
+  # 
+  # This workflow builds Docker images for up to 8 architectures across
+  # 6 priority-based steps with descending PostgreSQL version order (18→13).
+  #
+  # STEP 1a: "Recent [1/5]" (3 directories) - Latest Alpine + PostGIS versions (highest priority)
+  #   build(8-arch): 18-3.5/alpine3.22 → 17-3.5/alpine3.22 → 16-3.5/alpine3.22
+  #   manifest(8-arch): 18-3.5/alpine3.22 → 17-3.5/alpine3.22 → 16-3.5/alpine3.22
+  #
+  # STEP 1b: "Legacy [2/5]" (3 directories) - Older PostgreSQL with latest PostGIS (depends on Step 1a)
+  #   build(8-arch): 15-3.5/alpine3.22 → 14-3.5/alpine3.22 → 13-3.5/alpine3.22
+  #   manifest(8-arch): 15-3.5/alpine3.22 → 14-3.5/alpine3.22 → 13-3.5/alpine3.22
+  #
+  # STEP 2: "3.22 [3/5]" (7 directories) - Alpine 3.22 with older PostGIS (depends on Step 1b)
+  #   build(2-arch): 17-3.6/alpine3.22 → 18-3.6/alpine3.22 → 17-3.4/alpine3.22 → 16-3.4/alpine3.22 → 15-3.4/alpine3.22 → 14-3.4/alpine3.22 → 13-3.4/alpine3.22
+  #   manifest(2-arch): 17-3.6/alpine3.22 → 18-3.6/alpine3.22 → 17-3.4/alpine3.22 → 16-3.4/alpine3.22 → 15-3.4/alpine3.22 → 14-3.4/alpine3.22 → 13-3.4/alpine3.22
+  #
+  # STEP 4: "3.21-3.5 [4/5]" (5 directories) - Alpine 3.21 with PostGIS 3.5 (depends on Step 3)
+  #   build(2-arch): 17-3.5/alpine3.21 → 16-3.5/alpine3.21 → 15-3.5/alpine3.21 → 14-3.5/alpine3.21 → 13-3.5/alpine3.21
+  #   manifest(2-arch): 17-3.5/alpine3.21 → 16-3.5/alpine3.21 → 15-3.5/alpine3.21 → 14-3.5/alpine3.21 → 13-3.5/alpine3.21
+  #
+  # STEP 5: "3.21-3.4 [5/5]" (5 directories) - Alpine 3.21 with PostGIS 3.4 (depends on Step 4)
+  #   build(2-arch): 17-3.4/alpine3.21 → 16-3.4/alpine3.21 → 15-3.4/alpine3.21 → 14-3.4/alpine3.21 → 13-3.4/alpine3.21
+  #   manifest(2-arch): 17-3.4/alpine3.21 → 16-3.4/alpine3.21 → 15-3.4/alpine3.21 → 14-3.4/alpine3.21 → 13-3.4/alpine3.21
+  #
+  # STEP 6: "3.21-3.3 [6/6]" (4 directories) - Alpine 3.21 with PostGIS 3.3 (depends on Step 5)
+  #   build(2-arch): 16-3.3/alpine3.21 → 15-3.3/alpine3.21 → 14-3.3/alpine3.21 → 13-3.3/alpine3.21
+  #   manifest(2-arch): 16-3.3/alpine3.21 → 15-3.3/alpine3.21 → 14-3.3/alpine3.21 → 13-3.3/alpine3.21
+  # =============================================================================
+
+  # Step 1a: Recent Alpine versions with latest PostGIS (priority: highest - latest releases)
+  alpine-8arch-recent:
+    name: "Recent [1/6]"
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "Recent [1/6]"
+      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]'
+      image_directories: '["18-3.5/alpine3.22", "17-3.5/alpine3.22", "16-3.5/alpine3.22"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+      schedule_parallel: 8
+      manual_parallel: 6  
+      push_pr_parallel: 4
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 1b: Legacy PostgreSQL versions with latest PostGIS (priority: high - depends on Recent)
+  alpine-8arch-legacy:
+    name: "Legacy [2/6]"
+    needs: alpine-8arch-recent
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "Legacy [2/6]"
+      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]'
+      image_directories: '["15-3.5/alpine3.22", "14-3.5/alpine3.22", "13-3.5/alpine3.22"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 2: Alpine 3.22 with older PostGIS versions (priority: medium - depends on Legacy)
+  alpine-2arch-3-22:
+    name: "3.22 [3/6]"
+    needs: alpine-8arch-legacy
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "3.22 [3/6]"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["18-3.6/alpine3.22", "17-3.6/alpine3.22", "17-3.4/alpine3.22", "16-3.4/alpine3.22", "15-3.4/alpine3.22", "14-3.4/alpine3.22", "13-3.4/alpine3.22"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 3: Alpine 3.21 with PostGIS 3.5 (priority: low - depends on 3.22)
+  alpine-2arch-3-21-3-5:
+    name: "3.21-3.5 [4/6]"
+    needs: alpine-2arch-3-22
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "3.21-3.5 [4/6]"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["17-3.5/alpine3.21", "16-3.5/alpine3.21", "15-3.5/alpine3.21", "14-3.5/alpine3.21", "13-3.5/alpine3.21"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 4: Alpine 3.21 with PostGIS 3.4 (priority: lowest - depends on 3.5)
+  alpine-2arch-3-21-3-4:
+    name: "3.21-3.4 [5/6]"
+    needs: alpine-2arch-3-21-3-5
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "3.21-3.4 [5/6]"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["17-3.4/alpine3.21", "16-3.4/alpine3.21", "15-3.4/alpine3.21", "14-3.4/alpine3.21", "13-3.4/alpine3.21"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 5: Alpine 3.21 with PostGIS 3.3 (priority: legacy - depends on 3.4)
+  alpine-2arch-3-21-3-3:
+    name: "3.21-3.3 [6/6]"
+    needs: alpine-2arch-3-21-3-4
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "3.21-3.3 [6/6]"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["16-3.3/alpine3.21", "15-3.3/alpine3.21", "14-3.3/alpine3.21", "13-3.3/alpine3.21"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}

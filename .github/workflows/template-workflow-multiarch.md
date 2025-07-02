@@ -1,6 +1,6 @@
 # Multi-Architecture Docker Build Template
 
-This document describes the `build-manifest-template.yml` GitHub Actions workflow template, which provides a reusable system for building and testing multi-architecture Docker images for PostGIS containers.
+This document describes the `template-workflow-multiarch.yml` GitHub Actions workflow template, which provides a reusable system for building and testing multi-architecture Docker images for PostGIS containers.
 
 ## Overview
 
@@ -31,7 +31,7 @@ The workflow template supports these architectures with their corresponding conf
 
 ### Core Template Structure
 
-The `build-manifest-template.yml` serves as a reusable workflow template that accepts input parameters to configure builds for different scenarios:
+The `template-workflow-multiarch.yml` serves as a reusable workflow template that accepts input parameters to configure builds for different scenarios:
 
 #### Input Parameters
 
@@ -44,6 +44,9 @@ The `build-manifest-template.yml` serves as a reusable workflow template that ac
 | `registry` | No | `docker.io` | Docker registry URL |
 | `repo_name` | No | `imresamu` | Repository name |
 | `image_name` | No | `postgistest` | Base image name |
+| `schedule_parallel` | No | `8` | Max parallel builds for scheduled runs |
+| `manual_parallel` | No | `6` | Max parallel builds for manual runs |
+| `push_pr_parallel` | No | `4` | Max parallel builds for push/PR runs |
 
 #### Required Secrets
 
@@ -55,7 +58,7 @@ The `build-manifest-template.yml` serves as a reusable workflow template that ac
 ```yaml
 jobs:
   build-bookworm:
-    uses: ./.github/workflows/build-manifest-template.yml
+    uses: ./.github/workflows/template-workflow-multiarch.yml
     with:
       workflow_name: "Bookworm"
       supported_architectures: '["amd64", "arm64"]'
@@ -64,6 +67,9 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      schedule_parallel: 6
+      manual_parallel: 4
+      push_pr_parallel: 2
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
@@ -225,8 +231,54 @@ The workflow uses descriptive emoji-based job names:
 - **Native ARM Runners**: Direct ARM64 execution without emulation
 - **QEMU Only When Needed**: Conditional QEMU setup based on build type
 
-### Parallel Execution
-- **Matrix Jobs**: All architectures build simultaneously (max-parallel: 6)
+### Dynamic Parallel Execution
+
+The template supports **context-aware parallel execution** that adapts based on how the workflow is triggered:
+
+#### Parallel Build Configuration
+
+Each workflow can define custom parallel limits for different trigger scenarios:
+
+| Trigger Type | Parameter | Default | Description |
+|--------------|-----------|---------|-------------|
+| **Scheduled** | `schedule_parallel` | 8 | Only 1 workflow runs, higher parallelism allowed |
+| **Manual** | `manual_parallel` | 6 | 1-2 workflows typically run, moderate parallelism |
+| **Push/PR** | `push_pr_parallel` | 4 | 2-3 workflows may run simultaneously, conservative parallelism |
+
+#### Dynamic Logic
+
+```yaml
+max-parallel: ${{ 
+  github.event_name == 'schedule' && inputs.schedule_parallel ||
+  github.event_name == 'workflow_dispatch' && inputs.manual_parallel ||
+  inputs.push_pr_parallel 
+}}
+```
+
+#### Workflow-Specific Examples
+
+**Alpine Workflow (8 architectures):**
+```yaml
+schedule_parallel: 8    # Full parallelism when alone
+manual_parallel: 6      # Moderate when potentially concurrent  
+push_pr_parallel: 4     # Conservative when multiple workflows active
+```
+
+**Debian Workflow (2 architectures):**
+```yaml
+schedule_parallel: 6    # Higher than arch count for image parallelism
+manual_parallel: 4      # Moderate parallelism
+push_pr_parallel: 2     # Match architecture count
+```
+
+#### Resource Management Benefits
+
+- **Scheduled Runs**: Maximum throughput (only 1 workflow active)
+- **Manual Runs**: Balanced performance and resource usage
+- **Push/PR Events**: Prevents resource contention when multiple workflows trigger
+- **Flexible Configuration**: Each workflow optimizes based on its architecture count and complexity
+
+### Traditional Parallel Execution
 - **Fail-Fast Disabled**: Continue building other architectures on failure
 - **Sequential Manifests**: Single job processes all manifests for better debugging
 
@@ -296,12 +348,12 @@ To add support for new architectures in the template:
 - **JSON formatting**: Verify array parameters use proper JSON format
 - **Secret access**: Ensure calling workflow has access to required secrets
 
-## Integration with Existing Workflows
+## Integration with Build Workflows
 
-### Current Group Workflows
+### Current Build Workflows
 
-#### `manifest-debian.yml` - Debian Build Group (Active)
-**Schedule**: Tuesday 02:00 UTC (`cron: '0 2 * * 2'`)
+#### `workflow-build-debian.yml` - Debian Build Group (Active)
+**Schedule**: Monday 02:00 UTC (`cron: '0 2 * * 1'`)
 
 The Debian workflow has been optimized into **3 sequential steps** with **priority-based execution** and **descending PostgreSQL version order**:
 
@@ -346,12 +398,12 @@ image_directories: [
 ]
 ```
 
-#### `manifest-alpine.yml` - Alpine Build Group (Disabled)
-- **Status**: Currently disabled (`.unused` extension)
-- **Schedule**: Monday 02:00 UTC (`cron: '0 2 * * 1'`)
+#### `workflow-build-alpine.yml` - Alpine Build Group (Active)
+- **Status**: Active multi-architecture Alpine builds
+- **Schedule**: Tuesday 02:00 UTC (`cron: '0 2 * * 2'`)
 
-#### `manifest-other.yml` - Other Build Group (Disabled)  
-- **Status**: Currently disabled (`.unused` extension)
+#### `workflow-build-development.yml` - Development Build Group (Active)  
+- **Status**: Active development builds (Master/Recent/Locked)
 - **Schedule**: Wednesday 02:00 UTC (`cron: '0 2 * * 3'`)
 
 ### Migration Path
@@ -376,13 +428,44 @@ image_directories: [
 - Easy maintenance and updates
 
 ### Flexibility
-- Configurable architectures per build group
+- Configurable architectures per build workflow
 - Customizable registry settings
 - Branch-specific targeting
+- **Dynamic parallel execution** based on trigger type
+- **Per-workflow resource optimization**
 
 ### Scalability  
-- Easy to add new build groups
+- Easy to add new build workflows
 - Template handles complexity automatically
 - Resource protection with parallel limits
+
+## Template Usage in Practice
+
+The `template-workflow-multiarch.yml` is currently used by these active workflows:
+
+### Current Parallel Configuration
+
+| Workflow | Trigger | Schedule | Manual | Push/PR | Architecture Count |
+|----------|---------|----------|--------|---------|--------------------|
+| **`workflow-build-debian.yml`** | Monday 02:00 UTC | 6 | 4 | 2 | 2 architectures (3 steps) |
+| **`workflow-build-alpine.yml`** | Tuesday 02:00 UTC | 8 | 6 | 4 | 8 architectures (6 steps) |
+| **`workflow-build-development.yml`** | Wednesday 02:00 UTC | 4 | 3 | 2 | 2+1 architectures (3 steps) |
+
+### Resource Utilization by Scenario
+
+**Scheduled Runs (Weekdays 02:00 UTC):**
+- Only 1 workflow active per day (priority: Debian → Alpine → Development)
+- Maximum parallelism: Debian=6, Alpine=8, Development=4
+- **Total resource usage**: 4-8 parallel builds
+
+**Manual Triggers:**
+- 1-2 workflows typically active
+- Moderate parallelism: Debian=4, Alpine=6, Development=3  
+- **Total resource usage**: 3-10 parallel builds
+
+**Push/PR Events:**
+- 2-3 workflows may trigger simultaneously
+- Conservative parallelism: Debian=2, Alpine=4, Development=2
+- **Total resource usage**: 2-8 parallel builds (resource-safe)
 
 This template-based approach provides a production-ready, maintainable, and efficient multi-architecture Docker build system optimized for reduced API usage and improved debugging capabilities.

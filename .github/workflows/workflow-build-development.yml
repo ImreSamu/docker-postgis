@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Development | Docker Multi-Arch Build Workflow
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 3'  # Wednesday 02:00 UTC - Weekly Development builds
+  push:
+    branches:
+      - manifest  # Change to 'master' for production, 'manifest' for testing
+    paths:
+      - '.github/workflows/workflow-build-development.yml'
+      - '.github/workflows/template-workflow-multiarch.yml'
+#multi-arch-paths-start
+      # Locked paths
+      - '14-l3.1.9gcp/bookworm/**'
+      # Master paths
+      - '16-master/bookworm/**'
+      - '17-master/bookworm/**'
+      - '18-master/bookworm/**'
+      # Recent paths
+      - '16-recent/bookworm/**'
+      - '17-recent/bookworm/**'
+      - '18-recent/bookworm/**'
+#multi-arch-paths-end
+  pull_request:
+    paths:
+      - '.github/workflows/workflow-build-development.yml'
+      - '.github/workflows/template-workflow-multiarch.yml'
+#multi-arch-paths-start
+      # Locked paths
+      - '14-l3.1.9gcp/bookworm/**'
+      # Master paths
+      - '16-master/bookworm/**'
+      - '17-master/bookworm/**'
+      - '18-master/bookworm/**'
+      # Recent paths
+      - '16-recent/bookworm/**'
+      - '17-recent/bookworm/**'
+      - '18-recent/bookworm/**'
+#multi-arch-paths-end
+
+jobs:
+  # =============================================================================
+  # OTHER MULTI-ARCHITECTURE BUILD PIPELINE (3 STEPS)
+  # =============================================================================
+  # 
+  # This workflow builds Docker images for 2 architectures (amd64, arm64) across
+  # 3 priority-based steps with descending PostgreSQL version order (18→14).
+  #
+  # STEP 1: "Recent [1/3]" (3 directories) - Development builds from recent releases (highest priority)
+  #   build(-amd64,-arm64): 18-recent/bookworm → 17-recent/bookworm → 16-recent/bookworm
+  #   manifest(amd64+arm64): 18-recent/bookworm → 17-recent/bookworm → 16-recent/bookworm
+  #
+  # STEP 2: "Master [2/3]" (3 directories) - Development builds from master branches (depends on Step 1)
+  #   build(-amd64,-arm64): 18-master/bookworm → 17-master/bookworm → 16-master/bookworm
+  #   manifest(amd64+arm64): 18-master/bookworm → 17-master/bookworm → 16-master/bookworm
+  #
+  # STEP 3: "Locked [3/3]" (1 directory) - Locked legacy version for compatibility (depends on Step 2)
+  #   build(-amd64): 14-l3.1.9gcp/bookworm
+  #   manifest(amd64): 14-l3.1.9gcp/bookworm
+  # =============================================================================
+
+  # Step 1: Recent builds (priority: highest - latest development releases)
+  recent:
+    name: "Recent [1/3]"
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "Recent [1/3]"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["18-recent/bookworm", "17-recent/bookworm", "16-recent/bookworm"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+      schedule_parallel: 4
+      manual_parallel: 3
+      push_pr_parallel: 2
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 2: Master builds (priority: medium - latest development from master - depends on Recent)
+  master:
+    name: "Master [2/3]"
+    needs: recent
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "Master [2/3]"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["18-master/bookworm", "17-master/bookworm", "16-master/bookworm"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 3: Locked legacy version (priority: lowest - compatibility build - depends on Master)
+  locked:
+    name: "Locked [3/3]"
+    needs: master
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "Locked [3/3]"
+      supported_architectures: '["amd64"]'
+      image_directories: '["14-l3.1.9gcp/bookworm"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}

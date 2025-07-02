@@ -39,6 +39,21 @@ on:
         required: false
         type: string
         default: 'postgistest'
+      schedule_parallel:
+        description: 'Max parallel builds for scheduled runs'
+        required: false
+        type: number
+        default: 8
+      manual_parallel:
+        description: 'Max parallel builds for manual (workflow_dispatch) runs'
+        required: false
+        type: number
+        default: 6
+      push_pr_parallel:
+        description: 'Max parallel builds for push/PR runs'
+        required: false
+        type: number
+        default: 4
     secrets:
       DOCKERHUB_USERNAME:
         required: true
@@ -267,7 +282,11 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: ${{ 
+        github.event_name == 'schedule' && inputs.schedule_parallel ||
+        github.event_name == 'workflow_dispatch' && inputs.manual_parallel ||
+        inputs.push_pr_parallel 
+      }}
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
 
     steps:
@@ -400,22 +419,6 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-    - name: Check Docker Hub rate limits
-      if: ${{ env.REGISTRY == 'docker.io' }}
-      run: |
-        set -x
-        echo "# Checking Docker Hub API rate limits..."
-        
-        # Get rate limit info from Docker Hub registry headers (authenticated request)
-        RATE_HEADERS=$(curl -sI "https://registry-1.docker.io/v2/library/hello-world/manifests/latest" 2>/dev/null | grep -i "ratelimit\|docker-ratelimit" || true)
-        
-        if [ -n "$RATE_HEADERS" ]; then
-          echo "# Docker Hub rate limit status:"
-          echo "$RATE_HEADERS"
-        else
-          echo "# No Docker Hub rate limit headers found"
-          echo "# Note: Docker Hub may not expose rate limit headers for this endpoint"
-        fi
 
     - name: Create and push multi-architecture manifests
       run: |
