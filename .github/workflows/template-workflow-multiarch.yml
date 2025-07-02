@@ -297,14 +297,11 @@ jobs:
       with:
         platforms: ${{ matrix.target }}
 
-    - name: Set up Docker Buildx
+    - name: Set up Docker Buildx (using host driver for QEMU access)
       uses: docker/setup-buildx-action@v3
       with:
         install: true
-        driver: docker-container
-        driver-opts: |
-          network=host
-          privileged=true
+        driver: docker
         platforms: ${{ matrix.target }}
 
     - name: Bootstrap Buildx builder to load QEMU handlers
