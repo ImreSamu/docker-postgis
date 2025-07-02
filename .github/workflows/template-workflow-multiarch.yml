@@ -396,6 +396,13 @@ jobs:
     - name: List docker images with architecture info
       run: ./tools/list-docker-images.sh postgistest
 
+    - name: Debug - Check matrix variables
+      run: |
+        echo "Architecture: ${{ matrix.arch_variant }}"
+        echo "Build type: ${{ matrix.build_type }}"
+        echo "Target platform: ${{ matrix.target }}"
+        echo "Should run QEMU setup: ${{ matrix.build_type == 'qemu' }}"
+
     - name: Ensure QEMU for testing
       if: ${{ matrix.build_type == 'qemu' }}
       uses: docker/setup-qemu-action@v3
