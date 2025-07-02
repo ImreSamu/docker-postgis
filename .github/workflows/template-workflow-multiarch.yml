@@ -301,8 +301,15 @@ jobs:
       uses: docker/setup-buildx-action@v3
       with:
         install: true
-        driver-opts: network=host
+        driver: docker-container
+        driver-opts: |
+          network=host
+          privileged=true
         platforms: ${{ matrix.target }}
+
+    - name: Bootstrap Buildx builder to load QEMU handlers
+      if: ${{ matrix.build_type == 'qemu' }}
+      run: docker buildx inspect --bootstrap
 
     - name: Install build dependencies
       run: |
@@ -387,6 +394,12 @@ jobs:
 
     - name: List docker images with architecture info
       run: ./tools/list-docker-images.sh postgistest
+
+    - name: Ensure QEMU for testing
+      if: ${{ matrix.build_type == 'qemu' }}
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: ${{ matrix.target }}
 
     - name: Test built image with official test suite
       env:
