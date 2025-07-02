@@ -376,6 +376,19 @@ jobs:
 
         ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
 
+    - name: Check Docker Hub rate limits
+      if: ${{ needs.prepare-matrix.outputs.should_push == 'true' && env.REGISTRY == 'docker.io' }}
+      run: |
+        set -x
+        echo "Checking Docker Hub API rate limits..."
+        RATE_INFO=$(curl -s -I "https://registry-1.docker.io/v2/" | grep -i "ratelimit" || true)
+        if [ -n "$RATE_INFO" ]; then
+          echo "Docker Hub rate limit status:"
+          echo "$RATE_INFO"
+        else
+          echo "No Docker Hub rate limit headers found"
+        fi
+
     - name: Push Docker image
       if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
       run: |
