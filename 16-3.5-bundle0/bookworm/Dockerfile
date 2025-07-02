@@ -148,7 +148,7 @@ RUN set -eux \
     && rm -rf .git
     #install:  psql < /pg_svg/pg-svg-lib.sql
 
-FROM ${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}:16-3.5-bookworm
+FROM ${PGIS1_BASE_IMAGE}
 
 ARG PGIS1_OPTIMIZATION_FLAGS
 ARG PGIS1_SOURCE_REPO

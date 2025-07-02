@@ -376,10 +376,10 @@ jobs:
         build-args: |
           BUILDKIT_INLINE_CACHE=1
           PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
-          PGIS1_OPTIMIZATION_FLAGS="${{ matrix.optimization_flags }}"
-          PGIS1_LTO_FLAGS="${{ matrix.lto_flags }}"
-          REGISTRY=
-          REPO_NAME=
+          PGIS1_OPTIMIZATION_FLAGS=${{ matrix.optimization_flags }}
+          PGIS1_LTO_FLAGS=${{ matrix.lto_flags }}
+          REGISTRY=${{ contains(matrix.image_dir, 'bundle') && env.REGISTRY || '' }}
+          REPO_NAME=${{ contains(matrix.image_dir, 'bundle') && env.REPO_NAME || '' }}
           IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
 
     - name: List docker images with architecture info

@@ -147,7 +147,7 @@ RUN set -eux \
     && rm -rf .git
     #install:  psql < /pg_svg/pg-svg-lib.sql
 
-FROM ${REGISTRY}/${REPO_NAME}/${IMAGE_NAME}:{{ .[env.variant].PG_DOCKER }}-{{ .[env.variant].postgis }}-{{ env.variant }}
+FROM ${PGIS1_BASE_IMAGE}
 
 ARG PGIS1_OPTIMIZATION_FLAGS
 ARG PGIS1_SOURCE_REPO
