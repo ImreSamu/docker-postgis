@@ -386,6 +386,14 @@ jobs:
       run: docker images
 
     - name: Test built image with official test suite
+      env:
+        # Platform-specific Docker configuration for testing compatibility
+        # Native architectures (amd64, arm64): use legacy Docker build for postgres-initdb test
+        # QEMU architectures: keep buildx as legacy build may not support exotic platforms
+        DOCKER_BUILDKIT: ${{ contains(fromJson('["amd64", "arm64"]'), matrix.arch_variant) && '0' || '1' }}
+        DOCKER_DEFAULT_PLATFORM: ${{ matrix.target }}
+        PLATFORM: ${{ matrix.target }}
+        BUILDX_PLATFORMS: ${{ matrix.target }}
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
@@ -394,22 +402,29 @@ jobs:
 
         echo "Testing for ${{ matrix.target }} (build type: ${{ matrix.build_type_emoji }})"
         echo "Testing short image: $SHORT_TEST_IMAGE"
+        echo "Using DOCKER_BUILDKIT=$DOCKER_BUILDKIT for testing compatibility"
+        echo "Using DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM"
+        echo "Using PLATFORM=$PLATFORM"
+        echo "Using BUILDX_PLATFORMS=$BUILDX_PLATFORMS"
 
         git clone --depth 1 https://github.com/docker-library/official-images.git
 
         [[ -f "./official-images/test/run.sh" ]] || { echo "./official-images/test/run.sh not found"; exit 1; }
         [[ -f "./test/postgis-config.sh" ]] || { echo "./test/postgis-config.sh not found"; exit 1; }
         [[ -f "./official-images/test/config.sh" ]] || { echo "./official-images/test/config.sh not found"; exit 1; }
-
-        # Set platform for all builds to ensure correct image resolution
-        echo "Setting platform for ${{ matrix.target }} (build type: ${{ matrix.build_type_emoji }})"
-        export DOCKER_DEFAULT_PLATFORM="${{ matrix.target }}"
-        echo "Set DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM"
         
         # Quick platform test for all architectures
         docker run --rm --platform ${{ matrix.target }} "$SHORT_TEST_IMAGE" echo "Platform test successful" || {
           echo "Platform test failed, but continuing with official tests"
         }
+        
+        # Verify image is accessible for postgres-initdb test
+        echo "Verifying docker inspect for postgres-initdb test:"
+        docker inspect "$SHORT_TEST_IMAGE" > /dev/null && echo "✓ docker inspect successful" || echo "✗ docker inspect failed"
+        
+        # Additional debugging for postgres-initdb issue
+        echo "Available images matching pattern:"
+        docker images | grep postgistest || echo "No postgistest images found"
 
         # Create test configuration for short image name
         export REGISTRY=""
