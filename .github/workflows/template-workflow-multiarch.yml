@@ -403,10 +403,10 @@ jobs:
           echo "Native build detected - testing without platform override"
         fi
 
-        # Create architecture-specific test configuration without repository prefix
-        # This allows the image name to match the local Docker image format
-        export REGISTRY=""
-        export REPO_NAME=""
+        # Create test configuration that matches the actual image repository structure
+        # Use the actual registry and repo name from the TEST_IMAGE
+        export REGISTRY="${{ env.REGISTRY }}"
+        export REPO_NAME="${{ env.REPO_NAME }}"
         export IMAGE_NAME="${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}"
         
         # Run official test suite with detailed debugging
