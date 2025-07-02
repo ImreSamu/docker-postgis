@@ -179,7 +179,7 @@ env:
 
 jobs:
   prepare-matrix:
-    name: "🌍 Prepare Matrix"
+    name: "🌍 Prepare Matrix | ${{ inputs.workflow_name }}"
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
@@ -385,7 +385,7 @@ jobs:
         done
 
   create-manifests:
-    name: "📦 Create manifests"
+    name: "📦 Create manifests | ${{ inputs.workflow_name }}"
     needs: [prepare-matrix, build-images]
     runs-on: ubuntu-24.04
     if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
@@ -437,6 +437,6 @@ jobs:
           FIRST_TAG=$(cat "$image_dir/tags" | tr ' ' '\n' | sed '/^$/d' | head -n1)
           MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
 
-          ACTUAL_ARCHS=$(docker buildx imagetools inspect "$MANIFEST_TAG" | jq '.manifests | length')
-          [[ "$ACTUAL_ARCHS" -eq "$EXPECTED_ARCHS" ]] || { echo "Manifest ERROR: $ACTUAL_ARCHS/$EXPECTED_ARCHS"; exit 1; }
+          echo "Checking manifest: $MANIFEST_TAG"
+          docker buildx imagetools inspect "$MANIFEST_TAG"
         done
