@@ -376,19 +376,6 @@ jobs:
 
         ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
 
-    - name: Check Docker Hub rate limits
-      if: ${{ needs.prepare-matrix.outputs.should_push == 'true' && env.REGISTRY == 'docker.io' }}
-      run: |
-        set -x
-        echo "Checking Docker Hub API rate limits..."
-        RATE_INFO=$(curl -s -I "https://registry-1.docker.io/v2/" | grep -i "ratelimit" || true)
-        if [ -n "$RATE_INFO" ]; then
-          echo "Docker Hub rate limit status:"
-          echo "$RATE_INFO"
-        else
-          echo "No Docker Hub rate limit headers found"
-        fi
-
     - name: Push Docker image
       if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
       run: |
@@ -412,6 +399,23 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+    - name: Check Docker Hub rate limits
+      if: ${{ env.REGISTRY == 'docker.io' }}
+      run: |
+        set -x
+        echo "# Checking Docker Hub API rate limits..."
+        
+        # Get rate limit info from Docker Hub registry headers (authenticated request)
+        RATE_HEADERS=$(curl -sI "https://registry-1.docker.io/v2/library/hello-world/manifests/latest" 2>/dev/null | grep -i "ratelimit\|docker-ratelimit" || true)
+        
+        if [ -n "$RATE_HEADERS" ]; then
+          echo "# Docker Hub rate limit status:"
+          echo "$RATE_HEADERS"
+        else
+          echo "# No Docker Hub rate limit headers found"
+          echo "# Note: Docker Hub may not expose rate limit headers for this endpoint"
+        fi
 
     - name: Create and push multi-architecture manifests
       run: |
