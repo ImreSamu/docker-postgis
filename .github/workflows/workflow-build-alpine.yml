@@ -120,7 +120,7 @@ jobs:
     uses: ./.github/workflows/template-workflow-multiarch.yml
     with:
       workflow_name: "Recent [1/6]"
-      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]'
+      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64"]'
       image_directories: '["18-3.5/alpine3.22", "17-3.5/alpine3.22", "16-3.5/alpine3.22"]'
       target_branch: "manifest"
       registry: "docker.io"
@@ -140,7 +140,7 @@ jobs:
     uses: ./.github/workflows/template-workflow-multiarch.yml
     with:
       workflow_name: "Legacy [2/6]"
-      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"]'
+      supported_architectures: '["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64"]'
       image_directories: '["15-3.5/alpine3.22", "14-3.5/alpine3.22", "13-3.5/alpine3.22"]'
       target_branch: "manifest"
       registry: "docker.io"

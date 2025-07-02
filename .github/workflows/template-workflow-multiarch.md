@@ -22,10 +22,10 @@ The workflow template supports these architectures with their corresponding conf
 | **armv6** | 🦾 | ubuntu-24.04-arm | linux/arm/v6 | test_nojit 🔍🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Raspberry Pi Zero (JIT-incompatible) |
 | **armv7** | 🤖 | ubuntu-24.04-arm | linux/arm/v7 | test_nojit 🔍🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Raspberry Pi 2/3/4 (JIT-incompatible) |
 | **386** | 🖥️ | ubuntu-24.04 | linux/386 | test 🔍 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | Legacy 32-bit Intel (Experimental) |
-| **mips64le** | 🎯 | ubuntu-24.04 | linux/mips64le | skip 💨 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | MIPS 64-bit systems (Skip Tests) |
-| **ppc64le** | ⚡ | ubuntu-24.04 | linux/ppc64le | skip 💨 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | IBM POWER systems (Skip Tests) |
+| **mips64le** | 🎯 | ubuntu-24.04 | linux/mips64le | skip_nojit 💨🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | MIPS 64-bit systems (Skip Tests + No JIT) |
+| **ppc64le** | ⚡ | ubuntu-24.04 | linux/ppc64le | test_nojit 🔍🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | IBM POWER systems (No-JIT) |
 | **riscv64** | 🧩 | ubuntu-24.04 | linux/riscv64 | test_nojit 🔍🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | RISC-V 64-bit (No-JIT) |
-| **s390x** | 🏢 | ubuntu-24.04 | linux/s390x | skip 💨 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | IBM mainframes (Skip Tests) |
+| **s390x** | 🏢 | ubuntu-24.04 | linux/s390x | skip_nojit 💨🐢 | qemu 🔄 | -O1 -Wall -fno-omit-frame-pointer | - | IBM mainframes (Skip Tests + No JIT) |
 
 ## Template System
 
@@ -77,13 +77,14 @@ jobs:
 
 ## Regression Testing Modes
 
-The workflow supports four regression testing modes for PostGIS builds:
+The workflow supports five regression testing modes for PostGIS builds:
 
 ### Mode Descriptions
 
 | Mode | Emoji | Description | Behavior | JIT Setting | Use Case |
 |------|-------|-------------|----------|-------------|----------|
 | `skip` | 💨 | No regression tests | Tests are completely skipped | N/A | Fast builds, debugging |
+| `skip_nojit` | 💨🐢 | No regression tests + JIT disabled | Tests are skipped but JIT disabled for end users | Disabled + Config Modified | Problematic architectures needing JIT disabled |
 | `test` | 🔍 | Non-blocking tests | Tests run but failures don't fail the build | Enabled | Development, experimental architectures |
 | `test_nojit` | 🔍🐢 | Non-blocking tests without JIT | Tests run with JIT disabled, failures don't fail build | Disabled + Config Modified | JIT-incompatible architectures |
 | `require` | 🔒 | Blocking tests | Tests must pass or build fails | Enabled | Production architectures |
@@ -99,14 +100,16 @@ The workflow supports four regression testing modes for PostGIS builds:
   - Tests run but build continues on failure
   - QEMU emulation with conservative optimization (-O1)
 
-- **JIT-Incompatible Architectures** (armv6, armv7, riscv64): Use `test_nojit` mode
+- **JIT-Incompatible Architectures** (armv6, armv7, riscv64, ppc64le): Use `test_nojit` mode
   - Tests run with JIT disabled for compatibility
   - PostgreSQL configuration modified to disable JIT by default
   - ARM v6/v7 architectures often have JIT stability issues
+  - PPC64LE and RISC-V architectures have JIT compatibility issues
 
-- **Problematic Architectures** (mips64le, s390x): Use `skip` mode
-  - No regression tests for fastest builds
-  - Focus on successful compilation only
+- **Problematic Architectures** (mips64le, s390x): Use `skip_nojit` mode
+  - No regression tests for fastest builds (QEMU emulation issues)
+  - PostgreSQL configuration modified to disable JIT by default for end users
+  - Focus on successful compilation with JIT disabled
 
 ## Compiler Optimization Strategy
 
@@ -202,16 +205,17 @@ Based on typical Debian workflow execution:
 The template automatically passes these build arguments to Dockerfiles:
 
 ### Standard Arguments
-- `PGIS1_REGRESSION_MODE`: Controls regression test behavior
-- `PGIS1_OPTIMIZATION_FLAGS`: Compiler optimization level
-- `PGIS1_LTO_FLAGS`: Link-time optimization settings
+- `PGIS1_REGRESSION_MODE`: Controls regression test behavior (skip, skip_nojit, test, test_nojit, require)
+- `PGIS1_OPTIMIZATION_FLAGS`: Compiler optimization level (-O1 or -O3 with architecture-specific flags)
+- `PGIS1_LTO_FLAGS`: Link-time optimization settings (enabled for production architectures)
+- `BUILD_DATE`: Build timestamp for Docker labels (e.g., `2025-07-02T16:19:44+02:00`)
 
 ### Registry Arguments (for Bundle Images)
-- `REGISTRY`: Docker registry URL (e.g., `docker.io`)
-- `REPO_NAME`: Repository name (e.g., `imresamu`)
+- `REGISTRY`: Docker registry URL (e.g., `docker.io`) - only populated for bundle builds
+- `REPO_NAME`: Repository name (e.g., `imresamu`) - only populated for bundle builds  
 - `IMAGE_NAME`: Base image name with architecture suffix (e.g., `postgistest-amd64`)
 
-These arguments enable bundle images to reference the correct base images across architectures.
+These arguments enable bundle images to reference the correct base images across architectures and ensure proper Docker label timestamps.
 
 ## Job Naming Convention
 
@@ -222,7 +226,8 @@ The workflow uses descriptive emoji-based job names:
 **Examples**:
 - `💻amd64|🔒17-3.5/bookworm⚡` - Native amd64, required tests
 - `🧩riscv64|🔍🐢17-3.5/alpine3.22🔄` - QEMU riscv64, no-JIT tests
-- `🦾armv6|🔍17-3.5/bookworm🔄` - QEMU armv6, standard tests
+- `🏢s390x|💨🐢17-3.5/alpine3.22🔄` - QEMU s390x, skip tests + no JIT
+- `🎯mips64le|💨🐢16-3.5/bookworm🔄` - QEMU mips64le, skip tests + no JIT
 
 ## Performance Optimizations
 
@@ -396,8 +401,9 @@ image_directories: [
 ```
 
 #### `workflow-build-alpine.yml` - Alpine Build Group (Active)
-- **Status**: Active multi-architecture Alpine builds
+- **Status**: Active multi-architecture Alpine builds (7 architectures - s390x temporarily removed)
 - **Schedule**: Tuesday 02:00 UTC (`cron: '0 2 * * 2'`)
+- **Architecture Count**: 7 (amd64, arm64, armv6, armv7, 386, ppc64le, riscv64)
 
 #### `workflow-build-development.yml` - Development Build Group (Active)  
 - **Status**: Active development builds (Master/Recent/Locked)
@@ -445,7 +451,7 @@ The `template-workflow-multiarch.yml` is currently used by these active workflow
 | Workflow | Trigger | Schedule | Manual | Push/PR | Architecture Count |
 |----------|---------|----------|--------|---------|--------------------|
 | **`workflow-build-debian.yml`** | Monday 02:00 UTC | 6 | 4 | 2 | 2 architectures (3 steps) |
-| **`workflow-build-alpine.yml`** | Tuesday 02:00 UTC | 8 | 6 | 4 | 8 architectures (6 steps) |
+| **`workflow-build-alpine.yml`** | Tuesday 02:00 UTC | 8 | 6 | 4 | 7 architectures (6 steps) - s390x removed |
 | **`workflow-build-development.yml`** | Wednesday 02:00 UTC | 4 | 3 | 2 | 2+1 architectures (3 steps) |
 
 ### Resource Utilization by Scenario
@@ -453,16 +459,16 @@ The `template-workflow-multiarch.yml` is currently used by these active workflow
 **Scheduled Runs (Weekdays 02:00 UTC):**
 - Only 1 workflow active per day (priority: Debian → Alpine → Development)
 - Maximum parallelism: Debian=6, Alpine=8, Development=4
-- **Total resource usage**: 4-8 parallel builds
+- **Total resource usage**: 4-8 parallel builds (Alpine reduced from 8 to 7 architectures)
 
 **Manual Triggers:**
 - 1-2 workflows typically active
 - Moderate parallelism: Debian=4, Alpine=6, Development=3  
-- **Total resource usage**: 3-10 parallel builds
+- **Total resource usage**: 3-9 parallel builds (Alpine architecture reduction)
 
 **Push/PR Events:**
 - 2-3 workflows may trigger simultaneously
 - Conservative parallelism: Debian=2, Alpine=4, Development=2
-- **Total resource usage**: 2-8 parallel builds (resource-safe)
+- **Total resource usage**: 2-8 parallel builds (resource-safe, Alpine s390x removal improves stability)
 
 This template-based approach provides a production-ready, maintainable, and efficient multi-architecture Docker build system optimized for reduced API usage and improved debugging capabilities.
