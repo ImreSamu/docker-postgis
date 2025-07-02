@@ -281,7 +281,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     continue-on-error: false
     strategy:
-      fail-fast: false
+      fail-fast: true
       max-parallel: ${{ github.event_name == 'schedule' && inputs.schedule_parallel || github.event_name == 'workflow_dispatch' && inputs.manual_parallel || inputs.push_pr_parallel }}
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
 
@@ -339,16 +339,26 @@ jobs:
       run: |
         set -x
         TAGS_JSON='${{ steps.read-tags.outputs.tags }}'
-        DOCKER_TAGS=""
-
+        
+        # Generate short tags for building (avoid Docker tag length issues)
+        SHORT_TAGS=""
+        FINAL_TAGS=""
+        
         for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
+          SHORT_TAG=$(echo "$tag" | cut -d'-' -f1)
+          SHORT_IMAGE="${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${SHORT_TAG}"
           FULL_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${tag}"
-          [[ -z "$DOCKER_TAGS" ]] && DOCKER_TAGS="$FULL_TAG" || DOCKER_TAGS="$DOCKER_TAGS,$FULL_TAG"
+          
+          [[ -z "$SHORT_TAGS" ]] && SHORT_TAGS="$SHORT_IMAGE" || SHORT_TAGS="$SHORT_TAGS,$SHORT_IMAGE"
+          [[ -z "$FINAL_TAGS" ]] && FINAL_TAGS="$FULL_TAG" || FINAL_TAGS="$FINAL_TAGS,$FULL_TAG"
         done
 
-        echo "docker_tags=$DOCKER_TAGS" >> $GITHUB_OUTPUT
-        echo "Generated tags:"
-        echo "$DOCKER_TAGS" | tr ',' '\n'
+        echo "short_tags=$SHORT_TAGS" >> $GITHUB_OUTPUT
+        echo "final_tags=$FINAL_TAGS" >> $GITHUB_OUTPUT
+        echo "Generated short build tags:"
+        echo "$SHORT_TAGS" | tr ',' '\n'
+        echo "Generated final push tags:"
+        echo "$FINAL_TAGS" | tr ',' '\n'
 
     - name: Build Docker image
       uses: docker/build-push-action@v6
@@ -358,7 +368,7 @@ jobs:
         platforms: ${{ matrix.target }}
         push: false
         load: true
-        tags: ${{ steps.generate-tags.outputs.docker_tags }}
+        tags: ${{ steps.generate-tags.outputs.short_tags }}
         cache-from: type=gha,scope=${{ matrix.arch_variant }}-${{ matrix.image_dir }}
         cache-to: type=gha,mode=max,scope=${{ matrix.arch_variant }}-${{ matrix.image_dir }},compression=zstd
         provenance: false
@@ -379,9 +389,11 @@ jobs:
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
-        TEST_IMAGE="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${FIRST_TAG}"
+        SHORT_TAG=$(echo "$FIRST_TAG" | cut -d'-' -f1)
+        SHORT_TEST_IMAGE="${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${SHORT_TAG}"
 
         echo "Testing for ${{ matrix.target }} (build type: ${{ matrix.build_type_emoji }})"
+        echo "Testing short image: $SHORT_TEST_IMAGE"
 
         git clone --depth 1 https://github.com/docker-library/official-images.git
 
@@ -396,28 +408,43 @@ jobs:
           echo "Set DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM"
           
           # Quick platform test
-          docker run --rm --platform ${{ matrix.target }} "$TEST_IMAGE" echo "Platform test successful" || {
+          docker run --rm --platform ${{ matrix.target }} "$SHORT_TEST_IMAGE" echo "Platform test successful" || {
             echo "Platform test failed, but continuing with official tests"
           }
         else
           echo "Native build detected - testing without platform override"
         fi
 
-        # Create test configuration that matches the actual image repository structure
-        # Use the actual registry and repo name from the TEST_IMAGE
-        export REGISTRY="${{ env.REGISTRY }}"
-        export REPO_NAME="${{ env.REPO_NAME }}"
+        # Create test configuration for short image name
+        export REGISTRY=""
+        export REPO_NAME=""
         export IMAGE_NAME="${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}"
         
-        # Run official test suite with detailed debugging
-        bash -x ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$TEST_IMAGE"
+        # Run official test suite with short image name
+        ./official-images/test/run.sh -c ./official-images/test/config.sh -c test/postgis-config.sh "$SHORT_TEST_IMAGE"
 
-    - name: Push Docker image
+    - name: Tag and push Docker images
       if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
       run: |
         set -x
-        echo '${{ steps.generate-tags.outputs.docker_tags }}' | tr ',' '\n' | while read -r tag; do
-          docker push "$tag"
+        # Get short and final tags
+        SHORT_TAGS='${{ steps.generate-tags.outputs.short_tags }}'
+        FINAL_TAGS='${{ steps.generate-tags.outputs.final_tags }}'
+        
+        # Convert comma-separated lists to arrays
+        IFS=',' read -ra SHORT_ARRAY <<< "$SHORT_TAGS"
+        IFS=',' read -ra FINAL_ARRAY <<< "$FINAL_TAGS"
+        
+        # Tag each short image with final names and push
+        for i in "${!SHORT_ARRAY[@]}"; do
+          SHORT_TAG="${SHORT_ARRAY[i]}"
+          FINAL_TAG="${FINAL_ARRAY[i]}"
+          
+          echo "Tagging $SHORT_TAG as $FINAL_TAG"
+          docker tag "$SHORT_TAG" "$FINAL_TAG"
+          
+          echo "Pushing $FINAL_TAG"
+          docker push "$FINAL_TAG"
         done
 
   create-manifests:
