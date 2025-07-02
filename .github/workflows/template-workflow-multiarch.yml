@@ -378,12 +378,12 @@ jobs:
           PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
           PGIS1_OPTIMIZATION_FLAGS="${{ matrix.optimization_flags }}"
           PGIS1_LTO_FLAGS="${{ matrix.lto_flags }}"
-          REGISTRY=${{ env.REGISTRY }}
-          REPO_NAME=${{ env.REPO_NAME }}
+          REGISTRY=
+          REPO_NAME=
           IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
 
-    - name: List docker images
-      run: docker images
+    - name: List docker images with architecture info
+      run: ./tools/list-docker-images.sh postgistest
 
     - name: Test built image with official test suite
       env:
@@ -457,6 +457,32 @@ jobs:
           echo "Pushing $FINAL_TAG"
           docker push "$FINAL_TAG"
         done
+
+    - name: Verify pushed images - List tagged images with architecture
+      if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
+      run: |
+        echo "=== Verifying pushed images ==="
+        ./tools/list-docker-images.sh "${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}"
+
+    - name: Verify pushed images - Check labels for correctness
+      if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
+      run: |
+        echo "=== Verifying image labels after push ==="
+        FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
+        SHORT_TAG=$(echo "$FIRST_TAG" | cut -d'-' -f1)
+        SHORT_IMAGE="${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}:${SHORT_TAG}"
+        
+        echo "Checking labels for: $SHORT_IMAGE"
+        ./tools/list-docker-labels.sh "$SHORT_IMAGE"
+        
+        echo ""
+        echo "=== IMPORTANT: Verify the following ==="
+        echo "1. Labels should contain correct version information"
+        echo "2. org.opencontainers.image.* labels should be present"
+        echo "3. org.postgis.base.* labels should be present"
+        echo "4. maintainer label should be correct"
+        echo "5. For bundle images: description should mention 'Bundle'"
+        echo "6. Image architecture should match build target: ${{ matrix.target }}"
 
   create-manifests:
     name: "📦 Create manifests | ${{ inputs.workflow_name }}"
