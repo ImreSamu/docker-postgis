@@ -116,10 +116,10 @@ env:
     "s390x":    "skip"
   }'
 
-  # Define regression mode emoji mapping  
+  # Define regression mode emoji mapping
   REGRESSION_MODE_EMOJIS: '{
     "skip":       "💨",
-    "test":       "🔍", 
+    "test":       "🔍",
     "require":    "🔒",
     "test_nojit": "🔍🐢"
   }'
@@ -135,7 +135,7 @@ env:
     "amd64":    "native",
     "arm64":    "native",
     "armv6":    "qemu",
-    "armv7":    "qemu", 
+    "armv7":    "qemu",
     "386":      "qemu",
     "mips64le": "qemu",
     "ppc64le":  "qemu",
@@ -172,19 +172,6 @@ env:
     "ppc64le":  "",
     "riscv64":  "",
     "s390x":    ""
-  }'
-
-  # Define architecture to manifest annotation mapping - all architectures defined for easy expansion
-  ARCH_ANNOTATIONS: '{
-    "amd64":    {"os": "linux", "arch": "amd64"},
-    "arm64":    {"os": "linux", "arch": "arm64"},
-    "armv6":    {"os": "linux", "arch": "arm", "variant": "v6"},
-    "armv7":    {"os": "linux", "arch": "arm", "variant": "v7"},
-    "386":      {"os": "linux", "arch": "386"},
-    "mips64le": {"os": "linux", "arch": "mips64le"},
-    "ppc64le":  {"os": "linux", "arch": "ppc64le"},
-    "riscv64":  {"os": "linux", "arch": "riscv64"},
-    "s390x":    {"os": "linux", "arch": "s390x"}
   }'
 
   # Define image directories from input
@@ -304,7 +291,6 @@ jobs:
       run: |
         set -x
         pip3 install --upgrade pip lastversion check-jsonschema
-        tools/install_manifest-tool.sh
         tools/environment_init.sh
 
     - name: Check Docker Hub credentials
@@ -399,15 +385,10 @@ jobs:
         done
 
   create-manifests:
-    name: "📦 ${{ matrix.image_dir }} | manifest"
+    name: "📦 Create manifests"
     needs: [prepare-matrix, build-images]
     runs-on: ubuntu-24.04
     if: ${{ needs.prepare-matrix.outputs.should_push == 'true' }}
-
-    strategy:
-      max-parallel: 1
-      matrix:
-        image_dir: ${{ fromJson(needs.prepare-matrix.outputs.image_dirs) }}
 
     steps:
     - name: Checkout source
@@ -419,86 +400,43 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-    - name: Read original tags
-      id: read-original-tags
-      run: |
-        set -x
-        TAGS_FILE="${{ matrix.image_dir }}/tags"
-        [[ -f "$TAGS_FILE" ]] || { echo "Tags file not found"; exit 1; }
-        cat "$TAGS_FILE"
-        TAGS=$(cat "$TAGS_FILE" | tr ' ' '\n' | sed '/^$/d' | jq -R . | jq -s . | jq -c .)
-        echo "tags<<EOF" >> $GITHUB_OUTPUT
-        echo "$TAGS" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-
     - name: Create and push multi-architecture manifests
       run: |
         set -x
-        TAGS_JSON='${{ steps.read-original-tags.outputs.tags }}'
+        IMAGE_DIRS='${{ needs.prepare-matrix.outputs.image_dirs }}'
         ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
-        ARCH_ANNOTATIONS='${{ env.ARCH_ANNOTATIONS }}'
 
-        for tag in $(echo "$TAGS_JSON" | jq -r '.[]'); do
-          MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${tag}"
+        for image_dir in $(echo "$IMAGE_DIRS" | jq -r '.[]'); do
+          TAGS_FILE="$image_dir/tags"
+          [[ -f "$TAGS_FILE" ]] || { echo "Tags file not found: $TAGS_FILE"; exit 1; }
 
-          docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
+          TAGS=$(cat "$TAGS_FILE" | tr ' ' '\n' | sed '/^$/d' | jq -R . | jq -s . | jq -c .)
 
-          MANIFEST_CMD="docker manifest create --amend $MANIFEST_TAG"
-          for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-            MANIFEST_CMD="$MANIFEST_CMD $ARCH_TAG"
+          for tag in $(echo "$TAGS" | jq -r '.[]'); do
+            MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${tag}"
+
+            SOURCE_TAGS=""
+            for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
+              ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
+              [[ -z "$SOURCE_TAGS" ]] && SOURCE_TAGS="$ARCH_TAG" || SOURCE_TAGS="$SOURCE_TAGS $ARCH_TAG"
+            done
+
+            docker buildx imagetools create -t "$MANIFEST_TAG" $SOURCE_TAGS
+            docker buildx imagetools inspect "$MANIFEST_TAG" | jq '.manifests[] | {platform: .platform, digest: .digest}'
           done
-
-          if ! eval "$MANIFEST_CMD"; then
-            echo "Failed to create manifest for $MANIFEST_TAG"
-            exit 1
-          fi
-
-          # Annotate each architecture with proper platform metadata
-          for arch in $(echo "$ARCHITECTURES" | jq -r '.[]'); do
-            ARCH_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}-${arch}:${tag}"
-            ANNOTATION=$(echo "$ARCH_ANNOTATIONS" | jq -r ".[\"$arch\"]")
-
-            OS=$(echo "$ANNOTATION" | jq -r '.os')
-            ARCH_NAME=$(echo "$ANNOTATION" | jq -r '.arch')
-            VARIANT=$(echo "$ANNOTATION" | jq -r '.variant // empty')
-
-            if [[ -n "$VARIANT" ]]; then
-              docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os "$OS" --arch "$ARCH_NAME" --variant "$VARIANT"
-            else
-              docker manifest annotate "$MANIFEST_TAG" "$ARCH_TAG" --os "$OS" --arch "$ARCH_NAME"
-            fi
-          done
-
-          docker manifest push "$MANIFEST_TAG"
-          docker manifest inspect "$MANIFEST_TAG" | jq '.manifests[] | {platform: .platform, digest: .digest}'
         done
 
-    - name: Test multi-architecture manifests
+    - name: Test manifests
       run: |
         set -x
-        FIRST_TAG=$(echo '${{ steps.read-original-tags.outputs.tags }}' | jq -r '.[0]')
-        MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
-
-        MANIFEST_INFO=$(docker manifest inspect "$MANIFEST_TAG")
+        IMAGE_DIRS='${{ needs.prepare-matrix.outputs.image_dirs }}'
         ARCHITECTURES='${{ needs.prepare-matrix.outputs.architectures }}'
         EXPECTED_ARCHS=$(echo "$ARCHITECTURES" | jq 'length')
-        ACTUAL_ARCHS=$(echo "$MANIFEST_INFO" | jq '.manifests | length')
 
-        if [[ "$ACTUAL_ARCHS" -eq "$EXPECTED_ARCHS" ]]; then
-          echo "Manifest OK: $ACTUAL_ARCHS/$EXPECTED_ARCHS architectures"
-        else
-          echo "Manifest ERROR: $ACTUAL_ARCHS/$EXPECTED_ARCHS architectures"
-          exit 1
-        fi
+        for image_dir in $(echo "$IMAGE_DIRS" | jq -r '.[]'); do
+          FIRST_TAG=$(cat "$image_dir/tags" | tr ' ' '\n' | sed '/^$/d' | head -n1)
+          MANIFEST_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${FIRST_TAG}"
 
-  summary:
-    name: "📊 Build Summary"
-    needs: [prepare-matrix, build-images, create-manifests]
-    runs-on: ubuntu-24.04
-    if: false  # Disabled - will be re-enabled later with improvements
-
-    steps:
-    - name: Summary disabled
-      run: |
-        echo "Summary job disabled - will be improved later"
+          ACTUAL_ARCHS=$(docker buildx imagetools inspect "$MANIFEST_TAG" | jq '.manifests | length')
+          [[ "$ACTUAL_ARCHS" -eq "$EXPECTED_ARCHS" ]] || { echo "Manifest ERROR: $ACTUAL_ARCHS/$EXPECTED_ARCHS"; exit 1; }
+        done
