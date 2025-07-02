@@ -119,16 +119,17 @@ env:
   # Development/experimental architectures: test - tests run but won't fail build
   # JIT-incompatible architectures: test_nojit - tests with JIT disabled
   # Most problematic architectures: skip - no regression tests at all
+  # JIT-incompatible + skip tests: skip_nojit - no tests but JIT disabled for end users
   ARCH_REGRESSION_MODES: '{
     "amd64":    "require",
     "arm64":    "require",
     "armv6":    "test_nojit",
     "armv7":    "test_nojit",
     "386":      "test",
-    "mips64le": "skip",
-    "ppc64le":  "skip",
+    "mips64le": "skip_nojit",
+    "ppc64le":  "test_nojit",
     "riscv64":  "test_nojit",
-    "s390x":    "skip"
+    "s390x":    "skip_nojit"
   }'
 
   # Define regression mode emoji mapping
@@ -136,7 +137,8 @@ env:
     "skip":       "💨",
     "test":       "🔍",
     "require":    "🔒",
-    "test_nojit": "🔍🐢"
+    "test_nojit": "🔍🐢",
+    "skip_nojit": "💨🐢"
   }'
 
   # Define build type emoji mapping (native vs QEMU)
@@ -293,7 +295,7 @@ jobs:
       if: ${{ matrix.build_type == 'qemu' }}
       uses: docker/setup-qemu-action@v3
       with:
-        platforms: all
+        platforms: ${{ matrix.target }}
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -381,6 +383,7 @@ jobs:
           REGISTRY=${{ contains(matrix.image_dir, 'bundle') && env.REGISTRY || '' }}
           REPO_NAME=${{ contains(matrix.image_dir, 'bundle') && env.REPO_NAME || '' }}
           IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
+          BUILD_DATE=${{ github.event.head_commit.timestamp || github.run_started_at }}
 
     - name: List docker images with architecture info
       run: ./tools/list-docker-images.sh postgistest

@@ -31,6 +31,7 @@ ARG PGIS1_DUCKDB_CHECKOUT=tags/v1.3.1
 ARG PGIS1_OPTIMIZATION_FLAGS=" -O3 -mtune=generic "
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
+ARG BUILD_DATE
 
 FROM ${PGIS1_BASE_IMAGE} AS builder
 
@@ -154,6 +155,7 @@ ARG PGIS1_OPTIMIZATION_FLAGS
 ARG PGIS1_SOURCE_REPO
 ARG PGIS1_MAINTAINER
 ARG PGIS1_TIMESCALEDB_TELEMETRY
+ARG BUILD_DATE
 
 # Export build environment for child images (enterprise-grade package version locking)
 RUN set -eux \
@@ -175,7 +177,7 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.opencontainers.image.description="PostGIS Bundle - 16-3.5-bookworm with MobilityDB, TimescaleDB, DuckDB and 40+ extensions" \
       org.opencontainers.image.source="${PGIS1_SOURCE_REPO}" \
       org.opencontainers.image.version="3.5.3+dfsg-1~exp1.pgdg120+1-bundle0" \
-      org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.base.name="${PGIS1_BASE_IMAGE}" \
       \
       # Bundle-specific additional extensions (base PostGIS extensions inherited from org.postgis.base.extensions)

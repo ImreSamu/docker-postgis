@@ -11,6 +11,7 @@ ARG PGIS1_BASE_IMAGE=postgres:16-bookworm
 # usable for forking the image
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
+ARG BUILD_DATE
 
 ARG PGIS1_POSTGIS_REPOSITORY=https://github.com/postgis/postgis.git
 ARG PGIS1_GEOS_REPOSITORY=https://github.com/libgeos/geos.git
@@ -455,12 +456,13 @@ FROM ${PGIS1_BASE_IMAGE}
 ARG PGIS1_SOURCE_REPO
 ARG PGIS1_MAINTAINER
 ARG PGIS1_BASE_IMAGE
+ARG BUILD_DATE
 
 LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.opencontainers.image.description="PostGIS - 16-master spatial database extension with PostgreSQL 16 bookworm" \
       org.opencontainers.image.source="${PGIS1_SOURCE_REPO}" \
       org.opencontainers.image.version="16-master" \
-      org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.base.name="${PGIS1_BASE_IMAGE}" \
       \
       # child friendly image labels, so some duplacted labels expected
@@ -468,7 +470,7 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.base.description="PostGIS - 16-master spatial database extension with PostgreSQL 16 bookworm" \
       org.postgis.base.source="${PGIS1_SOURCE_REPO}" \
       org.postgis.base.version="16-master" \
-      org.postgis.base.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+      org.postgis.base.created="${BUILD_DATE}" \
       org.postgis.base.extensions="postgis,postgis_raster,postgis_sfcgal,postgis_topology,postgis_tiger_geocoder,address_standardizer" \
       org.postgis.base.name="${PGIS1_BASE_IMAGE}" \
       org.postgis.base.repositories="POSTGIS:${PGIS1_POSTGIS_REPOSITORY},GEOS:${PGIS1_GEOS_REPOSITORY},GDAL:${PGIS1_GDAL_REPOSITORY},PROJ:${PGIS1_PROJ_REPOSITORY},SFCGAL:${PGIS1_SFCGAL_REPOSITORY},CGAL:${PGIS1_CGAL_REPOSITORY}"
