@@ -387,10 +387,9 @@ jobs:
 
     - name: Test built image with official test suite
       env:
-        # Platform-specific Docker configuration for testing compatibility
-        # Native architectures (amd64, arm64): use legacy Docker build for postgres-initdb test
-        # QEMU architectures: keep buildx as legacy build may not support exotic platforms
-        DOCKER_BUILDKIT: ${{ contains(fromJson('["amd64", "arm64"]'), matrix.arch_variant) && '0' || '1' }}
+        # Disable buildx for all architectures during testing to ensure postgres-initdb test works
+        # The postgres-initdb test needs to find local images, not pull from registry
+        DOCKER_BUILDKIT: '0'
         DOCKER_DEFAULT_PLATFORM: ${{ matrix.target }}
         PLATFORM: ${{ matrix.target }}
         BUILDX_PLATFORMS: ${{ matrix.target }}
