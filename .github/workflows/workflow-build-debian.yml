@@ -12,6 +12,7 @@ on:
     paths:
       - '.github/workflows/workflow-build-debian.yml'
       - '.github/workflows/template-workflow-multiarch.yml'
+      - 'test/**'
 #multi-arch-paths-start
       # Bookworm paths
       - '13-3.5/bookworm/**'
@@ -34,6 +35,7 @@ on:
     paths:
       - '.github/workflows/workflow-build-debian.yml'
       - '.github/workflows/template-workflow-multiarch.yml'
+      - 'test/**'
 #multi-arch-paths-start
       # Bookworm paths
       - '13-3.5/bookworm/**'

@@ -12,6 +12,7 @@ on:
     paths:
       - '.github/workflows/workflow-build-alpine.yml'
       - '.github/workflows/template-workflow-multiarch.yml'
+      - 'test/**'
 #multi-arch-paths-start
       # Alpine-8Arch paths
       - '13-3.5/alpine3.22/**'
@@ -47,6 +48,7 @@ on:
     paths:
       - '.github/workflows/workflow-build-alpine.yml'
       - '.github/workflows/template-workflow-multiarch.yml'
+      - 'test/**'
 #multi-arch-paths-start
       # Alpine-8Arch paths
       - '13-3.5/alpine3.22/**'

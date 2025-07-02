@@ -154,6 +154,7 @@ ARG PGIS1_OPTIMIZATION_FLAGS
 ARG PGIS1_SOURCE_REPO
 ARG PGIS1_MAINTAINER
 ARG PGIS1_TIMESCALEDB_TELEMETRY
+ARG PGIS1_BASE_IMAGE
 ARG BUILD_DATE
 
 # Export build environment for child images (enterprise-grade package version locking)

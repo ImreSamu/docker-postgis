@@ -28,7 +28,7 @@ psql() {
 # Set default values for POSTGRES_TEST_TRIES and POSTGRES_TEST_SLEEP if they are not set.
 # You can change the default value of POSTGRES_TEST_TRIES and the POSTGRES_TEST_SLEEP in the CI build settings.
 # For special cases like Buildx/qemu tests, you may need to set POSTGRES_TEST_TRIES to 42.
-: "${POSTGRES_TEST_TRIES:=15}"
+: "${POSTGRES_TEST_TRIES:=60}"
 : "${POSTGRES_TEST_SLEEP:=2}"
 tries="$POSTGRES_TEST_TRIES"
 while ! echo 'SELECT 1' | psql &>/dev/null; do
@@ -45,7 +45,7 @@ echo 'SELECT PostGIS_Version()' | psql
 [ "$(echo 'SELECT ST_X(ST_Point(0,0))' | psql)" = 0 ]
 
 ## test address_standardizer extension
-echo 'CREATE EXTENSION address_standardizer;' | psql
+echo 'CREATE EXTENSION IF NOT EXISTS address_standardizer;' | psql
 response=$(echo $'SELECT zip FROM parse_address(\'1 Devonshire Place, Boston, MA 02109-1234\') AS a;' | psql)
 if [ "$response" = "02109" ]; then
     echo "address_standardizer extension installed and works!"
