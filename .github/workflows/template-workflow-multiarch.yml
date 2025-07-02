@@ -282,11 +282,7 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
-      max-parallel: ${{ 
-        github.event_name == 'schedule' && inputs.schedule_parallel ||
-        github.event_name == 'workflow_dispatch' && inputs.manual_parallel ||
-        inputs.push_pr_parallel 
-      }}
+      max-parallel: ${{ github.event_name == 'schedule' && inputs.schedule_parallel || github.event_name == 'workflow_dispatch' && inputs.manual_parallel || inputs.push_pr_parallel }}
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
 
     steps:

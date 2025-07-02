@@ -248,11 +248,7 @@ Each workflow can define custom parallel limits for different trigger scenarios:
 #### Dynamic Logic
 
 ```yaml
-max-parallel: ${{ 
-  github.event_name == 'schedule' && inputs.schedule_parallel ||
-  github.event_name == 'workflow_dispatch' && inputs.manual_parallel ||
-  inputs.push_pr_parallel 
-}}
+max-parallel: ${{ github.event_name == 'schedule' && inputs.schedule_parallel || github.event_name == 'workflow_dispatch' && inputs.manual_parallel || inputs.push_pr_parallel }}
 ```
 
 #### Workflow-Specific Examples
