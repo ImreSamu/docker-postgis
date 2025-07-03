@@ -516,7 +516,6 @@ jobs:
           REGISTRY=${{ contains(matrix.image_dir, 'bundle') && env.REGISTRY || '' }}
           REPO_NAME=${{ contains(matrix.image_dir, 'bundle') && env.REPO_NAME || '' }}
           IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
-          BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
         cache-from: |
           type=registry,ref=${{ env.RW_CACHE }}
           type=registry,ref=${{ env.RO_CACHE_PREV1W }}

@@ -13,7 +13,6 @@ ARG PGIS1_POSTGIS_CHECKOUT_SHA1=b32829d707ef65515df1224361b9f2d5889db348
 ARG PGIS1_OPTIMIZATION_FLAGS="-O3 -Wall -fno-omit-frame-pointer"
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
-ARG BUILD_DATE
 
 # Regression testing mode: skip, test, require
 ARG PGIS1_REGRESSION_MODE=require
@@ -32,14 +31,12 @@ ARG PGIS1_SOURCE_REPO
 ARG PGIS1_MAINTAINER
 ARG PGIS1_BASE_IMAGE
 ARG PGIS1_REGRESSION_MODE
-ARG BUILD_DATE
 
 LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.opencontainers.image.description="PostGIS ${PGIS1_POSTGIS_CHECKOUT} spatial database extension with PostgreSQL 18 alpine3.22" \
       org.opencontainers.image.source="${PGIS1_SOURCE_REPO}" \
       org.opencontainers.image.version="3.6.0alpha1" \
       org.opencontainers.image.revision="${PGIS1_POSTGIS_CHECKOUT_SHA1}" \
-      org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.base.name="${PGIS1_BASE_IMAGE}" \
       \
       # child friendly image labels, so some duplacted labels expected
@@ -48,7 +45,6 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.base.source="${PGIS1_SOURCE_REPO}" \
       org.postgis.base.version="3.6.0alpha1" \
       org.postgis.base.revision="${PGIS1_POSTGIS_CHECKOUT_SHA1}" \
-      org.postgis.base.created="${BUILD_DATE}" \
       org.postgis.base.extensions="postgis,postgis_raster,postgis_sfcgal,postgis_topology,postgis_tiger_geocoder,address_standardizer" \
       org.postgis.base.name="${PGIS1_BASE_IMAGE}" \
       org.postgis.base.optimization.flags="${PGIS1_OPTIMIZATION_FLAGS}" \
