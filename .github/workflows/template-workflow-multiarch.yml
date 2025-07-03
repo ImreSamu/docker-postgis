@@ -488,9 +488,9 @@ jobs:
         FAMILY: ${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}
         PG_MAJOR: ${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}                # "16" in 16-3.3/alpine3.21
         # Current week cache (read + write)
-        RW_CACHE: ${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}-pg${{ env.PG_MAJOR }}-${{ steps.iso-weeks.outputs.current_week }}
+        RW_CACHE: ${{ env.CACHE_REPO }}-${{ matrix.arch_variant }}:${{ env.WORKFLOW_CACHE_ID }}-${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}-pg${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}-${{ steps.iso-weeks.outputs.current_week }}
         # Previous ISO week cache for fallback (read-only)
-        RO_CACHE_PREV1W: ${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}-pg${{ env.PG_MAJOR }}-${{ steps.iso-weeks.outputs.prev_week }}
+        RO_CACHE_PREV1W: ${{ env.CACHE_REPO }}-${{ matrix.arch_variant }}:${{ env.WORKFLOW_CACHE_ID }}-${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}-pg${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}-${{ steps.iso-weeks.outputs.prev_week }}
 
       with:
         context: ${{ matrix.image_dir }}
