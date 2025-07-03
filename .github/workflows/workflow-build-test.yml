@@ -64,7 +64,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
-      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
+      workflow_cache_id: "tst"
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
