@@ -88,10 +88,6 @@ env:
   IMAGE_NAME: ${{ inputs.image_name }}
   TARGET_BRANCH: ${{ inputs.target_branch }}
   WORKFLOW_CACHE_ID: ${{ inputs.workflow_cache_id }}
-  # Cache configuration from inputs
-  CACHE_REGISTRY: ${{ inputs.cache_registry }}
-  CACHE_REPO_OWNER: ${{ inputs.cache_repo_owner || inputs.repo_name }}
-  CACHE_IMAGE_NAME: ${{ inputs.cache_image_name || format('{0}-cache', inputs.image_name) }}
 
   # Define supported architectures from input
   SUPPORTED_ARCHITECTURES: ${{ inputs.supported_architectures }}
@@ -218,10 +214,8 @@ env:
 
   # Define Docker cache repository from inputs
   # NOTE: Repository name must be lowercase for Docker registry compatibility
-  CACHE_REPO: ${{ env.CACHE_REGISTRY }}/${{ env.CACHE_REPO_OWNER }}/${{ env.CACHE_IMAGE_NAME }}
-  ISO_WEEK: ${{ github.run_started_at }}
-  # ISO week will be calculated in job steps
-  WEEK_TAG: "calculated-per-job"
+  CACHE_REPO: ${{ inputs.cache_registry }}/${{ inputs.cache_repo_owner || inputs.repo_name }}/${{ inputs.cache_image_name || format('{0}-cache', inputs.image_name) }}
+  # ISO week will be calculated in job steps using current time
 
 
 jobs:
@@ -340,9 +334,7 @@ jobs:
         echo "Workflow Cache ID: ${{ env.WORKFLOW_CACHE_ID }}"
         echo "Image Directory: ${{ matrix.image_dir }}"
         echo "Cache Repository: ${{ env.CACHE_REPO }}"
-        echo "ISO Week: ${{ env.ISO_WEEK }}"
-        echo "Week Tag: ${{ env.WEEK_TAG }}"
-        echo "GitHub Run Started At: ${{ github.run_started_at }}"
+        echo "ISO Week: (calculated in build steps)"
         echo ""
         echo "=== Cache Image Names (will be computed in Build step) ==="
         echo "Architecture: ${{ matrix.arch_variant }}"
@@ -452,9 +444,9 @@ jobs:
     - name: Calculate ISO week tags
       id: iso-weeks
       run: |
-        # Calculate current and previous ISO week
-        CURRENT_WEEK=$(date -u -d "${{ github.run_started_at }}" +%G-W%V)
-        PREV_WEEK=$(date -u -d "${{ github.run_started_at }} - 7 days" +%G-W%V)
+        # Calculate current and previous ISO week using current time
+        CURRENT_WEEK=$(date -u +%G-W%V)
+        PREV_WEEK=$(date -u -d "7 days ago" +%G-W%V)
         
         echo "current_week=$CURRENT_WEEK" >> $GITHUB_OUTPUT
         echo "prev_week=$PREV_WEEK" >> $GITHUB_OUTPUT
@@ -471,7 +463,6 @@ jobs:
         echo "=== ISO Week Calculation Debug ==="
         echo "Current ISO Week: ${{ steps.iso-weeks.outputs.current_week }}"
         echo "Previous ISO Week: ${{ steps.iso-weeks.outputs.prev_week }}"
-        echo "Run Started At: ${{ github.run_started_at }}"
         echo ""
         echo "=== Cache Debug Information ==="
         echo "Workflow Cache ID: ${{ env.WORKFLOW_CACHE_ID }}"
@@ -525,7 +516,7 @@ jobs:
           REGISTRY=${{ contains(matrix.image_dir, 'bundle') && env.REGISTRY || '' }}
           REPO_NAME=${{ contains(matrix.image_dir, 'bundle') && env.REPO_NAME || '' }}
           IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
-          BUILD_DATE=${{ github.event.head_commit.timestamp || github.run_started_at }}
+          BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
         cache-from: |
           type=registry,ref=${{ env.RW_CACHE }}
           type=registry,ref=${{ env.RO_CACHE_PREV1W }}
@@ -693,9 +684,9 @@ jobs:
         ARCH="${{ matrix.arch_variant }}"
         FAMILY=$(echo "${{ matrix.image_dir }}" | grep -q alpine && echo "alpine" || echo "debian")
         PG_MAJOR=$(echo "${{ matrix.image_dir }}" | cut -d'-' -f1)
-        WEEK_TAG=$(date -u -d "${{ github.run_started_at }}" +%G-W%V)
+        WEEK_TAG=$(date -u +%G-W%V)
         
-        RW_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-${PG_MAJOR}-${WEEK_TAG}"
+        RW_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-pg${PG_MAJOR}-${WEEK_TAG}"
         
         echo "=== Build Job Cache Summary ==="
         echo "Job: ${{ matrix.arch_variant }} | ${{ matrix.image_dir }}"
