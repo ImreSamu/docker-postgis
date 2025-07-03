@@ -200,7 +200,7 @@ env:
   IMAGE_DIRECTORIES: ${{ inputs.image_directories }}
 
   # Define Docker registry and repository name
-  CACHE_REPO: ghcr.io/${{ github.repository_owner }}/postgistest-cache
+  CACHE_REPO: ghcr.io/${{ toLower(github.repository_owner) }}/postgistest-cache
   ISO_WEEK: ${{ github.run_started_at }}
   # ISO week will be calculated in job steps
   WEEK_TAG: "calculated-per-job"
