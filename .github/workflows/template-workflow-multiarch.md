@@ -48,6 +48,9 @@ The `template-workflow-multiarch.yml` serves as a reusable workflow template tha
 | `manual_parallel` | No | `6` | Max parallel builds for manual runs |
 | `push_pr_parallel` | No | `4` | Max parallel builds for push/PR runs |
 | `workflow_cache_id` | Yes | - | Unique 3-character workflow cache identifier (alp, deb, dev) |
+| `cache_registry` | No | `ghcr.io` | Cache registry URL |
+| `cache_repo_owner` | No | `{repo_name}` | Cache repository owner (automatically derived from repo_name) |
+| `cache_image_name` | No | `{image_name}-cache` | Cache image base name (automatically derived from image_name) |
 
 #### Required Secrets
 
@@ -190,8 +193,22 @@ Based on typical Debian workflow execution:
   2. Docker Buildx configuration with explicit platform
   3. Dependency installation
   4. Image building with architecture-specific build arguments
-  5. Official test suite validation
+  5. Official test suite validation with PostgreSQL timeout configuration
   6. Conditional push to registry
+
+#### PostgreSQL Test Configuration
+The template includes specific timeout configuration for the official PostgreSQL test suite:
+
+- **POSTGRES_TEST_TRIES**: `60` - Maximum retry attempts for PostgreSQL connection tests
+- **POSTGRES_TEST_SLEEP**: `2` - Sleep seconds between retry attempts  
+- **Maximum timeout**: 120 seconds (60 × 2 seconds)
+
+These variables are used by the [docker-library/official-images test framework](https://github.com/docker-library/official-images/blob/master/test/tests/postgres-basics/run.sh):
+```bash
+retry.sh --tries "$POSTGRES_TEST_TRIES" --sleep "$POSTGRES_TEST_SLEEP" "echo 'SELECT 1' | psql"
+```
+
+**Rationale**: QEMU emulated architectures require more time for PostgreSQL to start and respond, but native builds also benefit from the generous timeout to prevent intermittent test failures.
 
 ### 3. Create Manifests Job (Single)
 - **Purpose**: Creates multi-architecture manifests for all images
@@ -217,7 +234,21 @@ The template automatically passes these build arguments to Dockerfiles:
 - `REPO_NAME`: Repository name (e.g., `imresamu`) - only populated for bundle builds  
 - `IMAGE_NAME`: Base image name with architecture suffix (e.g., `postgistest-amd64`)
 
-These arguments enable bundle images to reference the correct base images across architectures and ensure proper Docker label timestamps.
+### Docker Label Information
+These build arguments are automatically converted to Docker labels in the final images:
+
+#### Standard PostGIS Labels
+- `org.postgis.base.optimization.flags`: Compiler optimization level
+- `org.postgis.base.lto.flags`: Link-time optimization settings
+- `org.postgis.base.jit.status`: PostgreSQL JIT status (`enabled` or `disabled`)
+- `org.postgis.base.regression.mode`: Regression test mode used
+
+#### Bundle Image Labels  
+- `org.postgis.bundle0.optimization.flags`: Bundle-specific optimization flags
+- `org.postgis.bundle0.lto.flags`: Bundle-specific LTO settings
+- `org.postgis.bundle0.jit.status`: Bundle-specific JIT status
+
+**JIT Status Logic**: JIT is automatically disabled (`disabled`) for architectures using `test_nojit` or `skip_nojit` modes, and enabled (`enabled`) for all others.
 
 ## Job Naming Convention
 
@@ -300,33 +331,44 @@ To prevent cache conflicts when multiple workflows run simultaneously, the templ
 
 **Cache Tag Format:**
 ```yaml
-ghcr.io/imresamu/postgistest-cache-${arch}:${workflow_id}-${family}-${pg}-${week}
+# Current Week Cache (read+write):
+${cache_registry}/${cache_repo_owner}/${cache_image_name}-${arch}:${workflow_id}-${family}-pg${version}-${iso_week}
+
+# Previous Week Cache (fallback):
+${cache_registry}/${cache_repo_owner}/${cache_image_name}-${arch}:${workflow_id}-${family}-pg${version}-${prev_iso_week}
 ```
+
+**Automatic Cache Configuration:**
+- **Cache Registry**: Defaults to `ghcr.io`
+- **Cache Owner**: Automatically derived from `repo_name` input parameter
+- **Cache Image**: Automatically derived as `{image_name}-cache`
+- **PostgreSQL Prefix**: `pg17`, `pg16`, etc. for clarity
 
 **Workflow Identifiers:**
 - **Alpine**: `alp` - Alpine-based image builds
-- **Debian**: `deb` - Debian-based image builds
+- **Debian**: `deb` - Debian-based image builds  
 - **Development**: `dev` - Development/experimental builds
 
 **Cache Examples:**
 ```yaml
-# Alpine workflow cache:
-ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-17-2025-W27
+# Alpine workflow cache (PostgreSQL 17):
+ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-pg17-2025-W27
+ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-pg17-2025-W26  # fallback
 
-# Debian workflow cache:
-ghcr.io/imresamu/postgistest-cache-amd64:deb-debian-17-2025-W27
-
-# Development workflow cache:
-ghcr.io/imresamu/postgistest-cache-amd64:dev-alpine-17-2025-W27
+# Debian workflow cache (PostgreSQL 16):
+ghcr.io/imresamu/postgistest-cache-amd64:deb-debian-pg16-2025-W27
+ghcr.io/imresamu/postgistest-cache-amd64:deb-debian-pg16-2025-W26  # fallback
 ```
 
 #### Cache Strategy Benefits
 - **Parallel Execution**: No cache write conflicts between workflows
-- **Week-based Rotation**: Automatic cleanup with ISO week tags (e.g., `2025-W27`)
+- **ISO Week Rotation**: Automatic cleanup with ISO week tags (e.g., `2025-W27`)
 - **Architecture Isolation**: Each architecture has its own cache repository
-- **Workflow Isolation**: Each workflow has unique cache namespace
-- **Efficient Sharing**: Read cache still shares within workflow families
-- **Backward Compatibility**: Previous week cache remains accessible
+- **Workflow Isolation**: Each workflow has unique cache namespace  
+- **PostgreSQL Isolation**: Each PostgreSQL version has separate cache (pg17, pg16, etc.)
+- **2-Tier Fallback**: Current week → Previous week cache strategy
+- **Automatic Configuration**: Cache names derived from input parameters
+- **Weekly Cleanup**: Stale caches automatically expire
 
 #### Implementation
 Each workflow defines its cache identifier in the environment:

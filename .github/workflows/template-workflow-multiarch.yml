@@ -58,6 +58,19 @@ on:
         description: 'Unique 3-character workflow cache identifier (alp, deb, dev)'
         required: true
         type: string
+      cache_registry:
+        description: 'Cache registry (ghcr.io, etc.)'
+        required: false
+        type: string
+        default: 'ghcr.io'
+      cache_repo_owner:
+        description: 'Cache repository owner (must be lowercase, defaults to repo_name)'
+        required: false
+        type: string
+      cache_image_name:
+        description: 'Cache image base name (defaults to image_name-cache)'
+        required: false
+        type: string
     secrets:
       DOCKERHUB_USERNAME:
         required: true
@@ -75,6 +88,10 @@ env:
   IMAGE_NAME: ${{ inputs.image_name }}
   TARGET_BRANCH: ${{ inputs.target_branch }}
   WORKFLOW_CACHE_ID: ${{ inputs.workflow_cache_id }}
+  # Cache configuration from inputs
+  CACHE_REGISTRY: ${{ inputs.cache_registry }}
+  CACHE_REPO_OWNER: ${{ inputs.cache_repo_owner || inputs.repo_name }}
+  CACHE_IMAGE_NAME: ${{ inputs.cache_image_name || format('{0}-cache', inputs.image_name) }}
 
   # Define supported architectures from input
   SUPPORTED_ARCHITECTURES: ${{ inputs.supported_architectures }}
@@ -199,8 +216,9 @@ env:
   # Define image directories from input
   IMAGE_DIRECTORIES: ${{ inputs.image_directories }}
 
-  # Define Docker registry and repository name
-  CACHE_REPO: ghcr.io/imresamu/postgistest-cache
+  # Define Docker cache repository from inputs
+  # NOTE: Repository name must be lowercase for Docker registry compatibility
+  CACHE_REPO: ${{ env.CACHE_REGISTRY }}/${{ env.CACHE_REPO_OWNER }}/${{ env.CACHE_IMAGE_NAME }}
   ISO_WEEK: ${{ github.run_started_at }}
   # ISO week will be calculated in job steps
   WEEK_TAG: "calculated-per-job"
@@ -293,7 +311,7 @@ jobs:
 
     # Cache validation (Completed July 2025):
     # ✅ Cache write conflicts resolved with workflow_cache_id
-    # ✅ Format: ghcr.io/imresamu/postgistest-cache-${arch}:${workflow_id}-${family}-${pg}-${week}
+    # ✅ Format: ${cache_registry}/${cache_repo_owner}/${cache_image_name}-${arch}:${workflow_id}-${family}-${pg}-${week}
     # ✅ Each workflow writes to unique cache namespace (alp/deb/dev)
     # ✅ Matrix parallelism safe - no cache tag collisions possible
 
@@ -572,6 +590,12 @@ jobs:
         DOCKER_DEFAULT_PLATFORM: ${{ matrix.target }}
         PLATFORM: ${{ matrix.target }}
         BUILDX_PLATFORMS: ${{ matrix.target }}
+        # Buildx/qemu test need more time for the official postgres test
+        # These variables are used by docker-library/official-images test framework
+        # See: https://github.com/docker-library/official-images/blob/master/test/tests/postgres-basics/run.sh
+        # Usage: retry.sh --tries "$POSTGRES_TEST_TRIES" --sleep "$POSTGRES_TEST_SLEEP" "echo 'SELECT 1' | psql"
+        POSTGRES_TEST_TRIES: 60  # Maximum retry attempts for PostgreSQL connection tests
+        POSTGRES_TEST_SLEEP: 2   # Sleep seconds between retry attempts
       run: |
         set -x
         FIRST_TAG=$(echo '${{ steps.read-tags.outputs.tags }}' | jq -r '.[0]')
@@ -584,6 +608,7 @@ jobs:
         echo "Using DOCKER_DEFAULT_PLATFORM=$DOCKER_DEFAULT_PLATFORM"
         echo "Using PLATFORM=$PLATFORM"
         echo "Using BUILDX_PLATFORMS=$BUILDX_PLATFORMS"
+        echo "PostgreSQL test configuration: POSTGRES_TEST_TRIES=$POSTGRES_TEST_TRIES, POSTGRES_TEST_SLEEP=$POSTGRES_TEST_SLEEP"
 
         git clone --depth 1 https://github.com/docker-library/official-images.git
 
@@ -752,6 +777,6 @@ jobs:
 
 
 # TODO: - add a step to clean up old images in GHCR
-#   ghcr-cleaner ghcr.io/imresamu/postgistest-cache-amd64 \
+#   ghcr-cleaner ${cache_registry}/${cache_repo_owner}/${cache_image_name}-amd64 \
 #              --keep-tag-regex '2025-W(2[6-9]|3[0-9])'   # keep last 4 weeks
 #

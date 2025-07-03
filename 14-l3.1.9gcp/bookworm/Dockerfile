@@ -412,6 +412,11 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.base.created="${BUILD_DATE}" \
       org.postgis.base.extensions="postgis,postgis_raster,postgis_sfcgal,postgis_topology,postgis_tiger_geocoder,address_standardizer" \
       org.postgis.base.name="${PGIS1_BASE_IMAGE}" \
+      org.postgis.base.optimization.flags="${PGIS1_OPTIMIZATION_FLAGS}" \
+      org.postgis.base.lto.flags="${PGIS1_LTO_FLAGS}" \
+      org.postgis.base.jit.status="$(case "${PGIS1_REGRESSION_MODE}" in test_nojit|skip_nojit) echo 'disabled';; *) echo 'enabled';; esac)" \
+      org.postgis.base.source.repository="${PGIS1_POSTGIS_REPOSITORY}" \
+      org.postgis.base.regression.mode="${PGIS1_REGRESSION_MODE}" \
       org.postgis.base.repositories="POSTGIS:${PGIS1_POSTGIS_REPOSITORY},GEOS:${PGIS1_GEOS_REPOSITORY},GDAL:${PGIS1_GDAL_REPOSITORY},PROJ:${PGIS1_PROJ_REPOSITORY},SFCGAL:${PGIS1_SFCGAL_REPOSITORY},CGAL:${PGIS1_CGAL_REPOSITORY}"
 
 ARG PGIS1_CMAKE_BUILD_TYPE

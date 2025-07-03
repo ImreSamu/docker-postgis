@@ -180,6 +180,8 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.bundle0.excluded.pg17="sqlite_fdw,age,decoderbufs" \
       org.postgis.bundle0.permanently.excluded="parray_gin,pg_quack" \
       org.postgis.bundle0.optimization.flags="${PGIS1_OPTIMIZATION_FLAGS}" \
+      org.postgis.bundle0.lto.flags="${PGIS1_LTO_FLAGS}" \
+      org.postgis.bundle0.jit.status="$(case "${PGIS1_REGRESSION_MODE}" in test_nojit|skip_nojit) echo 'disabled';; *) echo 'enabled';; esac)" \
       org.postgis.bundle0.timescaledb.telemetry="${PGIS1_TIMESCALEDB_TELEMETRY}" \
       org.postgis.bundle0.duckdb.version="tags/v1.3.1"
 

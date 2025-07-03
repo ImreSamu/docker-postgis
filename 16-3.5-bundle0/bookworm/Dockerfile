@@ -185,6 +185,8 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.bundle0.additional.extensions="timescaledb,mobilitydb,pgsql_http,pgsql_gzip,pgrouting,pgvector,h3,pointcloud,pgaudit,byteamagic,ddlx,dsef,json_accessors,lostgis,permuteseq,pg_curl,pg_roaringbitmap,pg_rowalesce,pg_uuidv7,pg_xenophile,pg_xxhash,pgsodium,pgsql_tweaks,sqlite_fdw,age,decoderbufs,asn1oid,extra_window_functions,first_last_agg,hll,hypopg,icu_ext,jsquery,numeral,ogr_fdw,partman,periods,pg_fact_loader,pg_failover_slots,pg_stat_kcache,pg_wait_sampling,pgl_ddl_deploy,pglogical,pgmp,pgpcre,pgq3,pgsphere,pgtap,pldebugger,plpgsql_check,prefix,prioritize,q3c,repack,rum,show_plans,squeeze" \
       org.postgis.bundle0.permanently.excluded="parray_gin,pg_quack" \
       org.postgis.bundle0.optimization.flags="${PGIS1_OPTIMIZATION_FLAGS}" \
+      org.postgis.bundle0.lto.flags="${PGIS1_LTO_FLAGS}" \
+      org.postgis.bundle0.jit.status="$(case "${PGIS1_REGRESSION_MODE}" in test_nojit|skip_nojit) echo 'disabled';; *) echo 'enabled';; esac)" \
       org.postgis.bundle0.timescaledb.telemetry="${PGIS1_TIMESCALEDB_TELEMETRY}" \
       org.postgis.bundle0.duckdb.version="tags/v1.3.1"
 
