@@ -227,7 +227,6 @@ The template automatically passes these build arguments to Dockerfiles:
 - `PGIS1_REGRESSION_MODE`: Controls regression test behavior (skip, skip_nojit, test, test_nojit, require)
 - `PGIS1_OPTIMIZATION_FLAGS`: Compiler optimization level (-O1 or -O3 with architecture-specific flags)
 - `PGIS1_LTO_FLAGS`: Link-time optimization settings (enabled for production architectures)
-- `BUILD_DATE`: Build timestamp for Docker labels (e.g., `2025-07-02T16:19:44+02:00`)
 
 ### Registry Arguments (for Bundle Images)
 - `REGISTRY`: Docker registry URL (e.g., `docker.io`) - only populated for bundle builds

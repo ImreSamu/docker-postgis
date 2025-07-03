@@ -506,6 +506,7 @@ jobs:
         file: ${{ matrix.image_dir }}/Dockerfile
         platforms: ${{ matrix.target }}
         push: false
+        pull: true
         load: true
         tags: ${{ steps.generate-tags.outputs.short_tags }}
         build-args: |
