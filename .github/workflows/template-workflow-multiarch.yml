@@ -202,8 +202,8 @@ env:
   # Define Docker registry and repository name
   CACHE_REPO: ghcr.io/${{ github.repository_owner }}/postgistest-cache
   ISO_WEEK: ${{ github.run_started_at }}
-  # Convert 2025-07-03T12:34:56Z -> 2025-W27
-  WEEK_TAG: ${{ fromJson('["bash","-c","date -u -d \"$ISO_WEEK\" +%G-W%V"]')[2] }}
+  # ISO week will be calculated in job steps
+  WEEK_TAG: "calculated-per-job"
 
 
 jobs:
@@ -431,38 +431,53 @@ jobs:
     # - Write cache: Unique per workflow+arch+family+pg+week
     # - Result: No cache conflicts even with maximum parallel workflows
 
+    - name: Calculate ISO week tags
+      id: iso-weeks
+      run: |
+        # Calculate current and previous ISO week
+        CURRENT_WEEK=$(date -u -d "${{ github.run_started_at }}" +%G-W%V)
+        PREV_WEEK=$(date -u -d "${{ github.run_started_at }} - 7 days" +%G-W%V)
+        
+        echo "current_week=$CURRENT_WEEK" >> $GITHUB_OUTPUT
+        echo "prev_week=$PREV_WEEK" >> $GITHUB_OUTPUT
+        echo "Current ISO week: $CURRENT_WEEK"
+        echo "Previous ISO week: $PREV_WEEK"
+
     - name: Debug - Cache tags and configuration
       run: |
         # Extract cache variables (same logic as Build step)
         ARCH="${{ matrix.arch_variant }}"
         FAMILY=$(echo "${{ matrix.image_dir }}" | grep -q alpine && echo "alpine" || echo "debian")
         PG_MAJOR=$(echo "${{ matrix.image_dir }}" | cut -d'-' -f1)
-        WEEK_TAG=$(date -u -d "${{ github.run_started_at }}" +%G-W%V)
         
+        echo "=== ISO Week Calculation Debug ==="
+        echo "Current ISO Week: ${{ steps.iso-weeks.outputs.current_week }}"
+        echo "Previous ISO Week: ${{ steps.iso-weeks.outputs.prev_week }}"
+        echo "Run Started At: ${{ github.run_started_at }}"
+        echo ""
         echo "=== Cache Debug Information ==="
         echo "Workflow Cache ID: ${{ env.WORKFLOW_CACHE_ID }}"
         echo "Architecture: ${ARCH}"
         echo "Family (detected): ${FAMILY}"
-        echo "PostgreSQL Major: ${PG_MAJOR}"
-        echo "Week Tag: ${WEEK_TAG}"
+        echo "PostgreSQL Major: pg${PG_MAJOR} (with prefix)"
         echo ""
         echo "=== Generated Cache Image Names ==="
-        RO_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}"
-        RW_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-${PG_MAJOR}-${WEEK_TAG}"
-        PREV_WEEK_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-${PG_MAJOR}-$(date -u -d 'last week' +%G-W%V)"
+        RW_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-pg${PG_MAJOR}-${{ steps.iso-weeks.outputs.current_week }}"
+        PREV_WEEK_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-pg${PG_MAJOR}-${{ steps.iso-weeks.outputs.prev_week }}"
         
-        echo "Read-Only Cache (broad): ${RO_CACHE}"
-        echo "Read-Write Cache (unique): ${RW_CACHE}"
-        echo "Previous Week Cache (fallback): ${PREV_WEEK_CACHE}"
+        echo "1. Current Week Cache (read+write): ${RW_CACHE}"
+        echo "2. Previous Week Cache (fallback): ${PREV_WEEK_CACHE}"
         echo ""
         echo "=== Cache Strategy Summary ==="
         echo "• Workflow isolation: ${{ env.WORKFLOW_CACHE_ID }} namespace"
         echo "• Architecture isolation: ${ARCH} repository"
         echo "• Family isolation: ${FAMILY} tag component"
-        echo "• PostgreSQL isolation: ${PG_MAJOR} tag component"
-        echo "• Time isolation: ${WEEK_TAG} weekly rotation"
-        echo "• Read sharing: Workflow + arch + family level"
-        echo "• Write uniqueness: Workflow + arch + family + PG + week level"
+        echo "• PostgreSQL isolation: pg${PG_MAJOR} tag component (with prefix)"
+        echo "• Time isolation: ISO week rotation (${{ steps.iso-weeks.outputs.current_week }})"
+        echo "• Read sharing: 2-tier fallback (current week → previous week)"
+        echo "• Write uniqueness: Workflow + arch + family + pg + ISO week"
+        echo "• Cache format: ${ARCH}:workflow-family-pgXX-YYYY-WNN"
+        echo "• Cache retention: Weekly rotation with automatic cleanup"
         echo "================================"
 
     - name: Build Docker image
@@ -472,10 +487,10 @@ jobs:
         # Extract distro and PG major from the directory name
         FAMILY: ${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}
         PG_MAJOR: ${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}                # "16" in 16-3.3/alpine3.21
-        # Shared read-only cache (workflow + arch + family)
-        RO_CACHE: ${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}
-        # Unique write cache (workflow + arch + family + pg + week)
-        RW_CACHE: ${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}-${{ env.PG_MAJOR }}-${{ env.WEEK_TAG }}
+        # Current week cache (read + write)
+        RW_CACHE: ${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}-pg${{ env.PG_MAJOR }}-${{ steps.iso-weeks.outputs.current_week }}
+        # Previous ISO week cache for fallback (read-only)
+        RO_CACHE_PREV1W: ${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}-pg${{ env.PG_MAJOR }}-${{ steps.iso-weeks.outputs.prev_week }}
 
       with:
         context: ${{ matrix.image_dir }}
@@ -494,9 +509,8 @@ jobs:
           IMAGE_NAME=${{ env.IMAGE_NAME }}-${{ matrix.arch_variant }}
           BUILD_DATE=${{ github.event.head_commit.timestamp || github.run_started_at }}
         cache-from: |
-          type=registry,ref=${{ env.RO_CACHE }}
-          # Previous week too – smooth rollover
-          type=registry,ref=${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}-${{ env.PG_MAJOR }}-$(date -u -d 'last week' +%G-W%V)
+          type=registry,ref=${{ env.RW_CACHE }}
+          type=registry,ref=${{ env.RO_CACHE_PREV1W }}
         cache-to: |
           type=registry,ref=${{ env.RW_CACHE }},mode=max,compression=zstd
         provenance: false
@@ -508,19 +522,23 @@ jobs:
         ARCH="${{ matrix.arch_variant }}"
         FAMILY=$(echo "${{ matrix.image_dir }}" | grep -q alpine && echo "alpine" || echo "debian")
         PG_MAJOR=$(echo "${{ matrix.image_dir }}" | cut -d'-' -f1)
-        WEEK_TAG=$(date -u -d "${{ github.run_started_at }}" +%G-W%V)
         
-        RO_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}"
-        RW_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-${PG_MAJOR}-${WEEK_TAG}"
-        PREV_WEEK_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-${PG_MAJOR}-$(date -u -d 'last week' +%G-W%V)"
+        RW_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-pg${PG_MAJOR}-${{ steps.iso-weeks.outputs.current_week }}"
+        PREV_WEEK_CACHE="${{ env.CACHE_REPO }}-${ARCH}:${{ env.WORKFLOW_CACHE_ID }}-${FAMILY}-pg${PG_MAJOR}-${{ steps.iso-weeks.outputs.prev_week }}"
         
         echo "=== Cache Operation Results ==="
         echo "Build completed for: ${{ matrix.image_dir }} on ${{ matrix.arch_variant }}"
+        echo "ISO Weeks: Current=${{ steps.iso-weeks.outputs.current_week }}, Previous=${{ steps.iso-weeks.outputs.prev_week }}"
         echo ""
-        echo "=== Cache Images Used ==="
-        echo "Primary read cache: ${RO_CACHE}"
-        echo "Fallback read cache: ${PREV_WEEK_CACHE}"
-        echo "Write cache target: ${RW_CACHE}"
+        echo "=== Cache Images Used During Build ==="
+        echo "1. Current week cache (read+write): ${RW_CACHE}"
+        echo "2. Previous week cache (fallback): ${PREV_WEEK_CACHE}"
+        echo ""
+        echo "=== Cache Strategy Details ==="
+        echo "• PostgreSQL Version: pg${PG_MAJOR} (with prefix for clarity)"
+        echo "• Cache Write Target: ${RW_CACHE}"
+        echo "• Cache Read Sources: 2-tier fallback strategy"
+        echo "• Cache Retention: Weekly rotation prevents stale caches"
         echo ""
         echo "=== Cache Hit/Miss Analysis ==="
         echo "Note: Detailed cache statistics are available in the Build Docker image step logs"
