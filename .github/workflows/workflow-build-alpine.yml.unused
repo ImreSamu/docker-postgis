@@ -81,35 +81,43 @@ on:
       - '17-3.5/alpine3.21/**'
 #multi-arch-paths-end
 
+env:
+  WORKFLOW_CACHE_ID: "alp"  # Alpine workflow cache identifier
+
 jobs:
   # =============================================================================
-  # ALPINE MULTI-ARCHITECTURE BUILD PIPELINE (6 STEPS)
+  # ALPINE MULTI-ARCHITECTURE BUILD PIPELINE (7 STEPS)
   # =============================================================================
   # 
   # This workflow builds Docker images for up to 8 architectures across
-  # 6 priority-based steps with descending PostgreSQL version order (18→13).
+  # 7 priority-based steps with descending PostgreSQL version order (18→13).
+  # Cache optimization: Each step has unique PostGIS versions to avoid cache conflicts.
   #
-  # STEP 1a: "Recent [1/5]" (3 directories) - Latest Alpine + PostGIS versions (highest priority)
+  # STEP 1a: "Recent [1/7]" (3 directories) - Latest Alpine + PostGIS versions (highest priority)
   #   build(8-arch): 18-3.5/alpine3.22 → 17-3.5/alpine3.22 → 16-3.5/alpine3.22
   #   manifest(8-arch): 18-3.5/alpine3.22 → 17-3.5/alpine3.22 → 16-3.5/alpine3.22
   #
-  # STEP 1b: "Legacy [2/5]" (3 directories) - Older PostgreSQL with latest PostGIS (depends on Step 1a)
+  # STEP 1b: "Legacy [2/7]" (3 directories) - Older PostgreSQL with latest PostGIS (depends on Step 1a)
   #   build(8-arch): 15-3.5/alpine3.22 → 14-3.5/alpine3.22 → 13-3.5/alpine3.22
   #   manifest(8-arch): 15-3.5/alpine3.22 → 14-3.5/alpine3.22 → 13-3.5/alpine3.22
   #
-  # STEP 2: "3.22 [3/5]" (7 directories) - Alpine 3.22 with older PostGIS (depends on Step 1b)
-  #   build(2-arch): 17-3.6/alpine3.22 → 18-3.6/alpine3.22 → 17-3.4/alpine3.22 → 16-3.4/alpine3.22 → 15-3.4/alpine3.22 → 14-3.4/alpine3.22 → 13-3.4/alpine3.22
-  #   manifest(2-arch): 17-3.6/alpine3.22 → 18-3.6/alpine3.22 → 17-3.4/alpine3.22 → 16-3.4/alpine3.22 → 15-3.4/alpine3.22 → 14-3.4/alpine3.22 → 13-3.4/alpine3.22
+  # STEP 2a: "3.22-3.6 [3/7]" (2 directories) - Alpine 3.22 with PostGIS 3.6 (depends on Step 1b)
+  #   build(2-arch): 18-3.6/alpine3.22 → 17-3.6/alpine3.22
+  #   manifest(2-arch): 18-3.6/alpine3.22 → 17-3.6/alpine3.22
   #
-  # STEP 4: "3.21-3.5 [4/5]" (5 directories) - Alpine 3.21 with PostGIS 3.5 (depends on Step 3)
+  # STEP 2b: "3.22-3.4 [4/7]" (5 directories) - Alpine 3.22 with PostGIS 3.4 (depends on Step 2a)
+  #   build(2-arch): 17-3.4/alpine3.22 → 16-3.4/alpine3.22 → 15-3.4/alpine3.22 → 14-3.4/alpine3.22 → 13-3.4/alpine3.22
+  #   manifest(2-arch): 17-3.4/alpine3.22 → 16-3.4/alpine3.22 → 15-3.4/alpine3.22 → 14-3.4/alpine3.22 → 13-3.4/alpine3.22
+  #
+  # STEP 3: "3.21-3.5 [5/7]" (5 directories) - Alpine 3.21 with PostGIS 3.5 (depends on Step 2b)
   #   build(2-arch): 17-3.5/alpine3.21 → 16-3.5/alpine3.21 → 15-3.5/alpine3.21 → 14-3.5/alpine3.21 → 13-3.5/alpine3.21
   #   manifest(2-arch): 17-3.5/alpine3.21 → 16-3.5/alpine3.21 → 15-3.5/alpine3.21 → 14-3.5/alpine3.21 → 13-3.5/alpine3.21
   #
-  # STEP 5: "3.21-3.4 [5/5]" (5 directories) - Alpine 3.21 with PostGIS 3.4 (depends on Step 4)
+  # STEP 4: "3.21-3.4 [6/7]" (5 directories) - Alpine 3.21 with PostGIS 3.4 (depends on Step 3)
   #   build(2-arch): 17-3.4/alpine3.21 → 16-3.4/alpine3.21 → 15-3.4/alpine3.21 → 14-3.4/alpine3.21 → 13-3.4/alpine3.21
   #   manifest(2-arch): 17-3.4/alpine3.21 → 16-3.4/alpine3.21 → 15-3.4/alpine3.21 → 14-3.4/alpine3.21 → 13-3.4/alpine3.21
   #
-  # STEP 6: "3.21-3.3 [6/6]" (4 directories) - Alpine 3.21 with PostGIS 3.3 (depends on Step 5)
+  # STEP 5: "3.21-3.3 [7/7]" (4 directories) - Alpine 3.21 with PostGIS 3.3 (depends on Step 4)
   #   build(2-arch): 16-3.3/alpine3.21 → 15-3.3/alpine3.21 → 14-3.3/alpine3.21 → 13-3.3/alpine3.21
   #   manifest(2-arch): 16-3.3/alpine3.21 → 15-3.3/alpine3.21 → 14-3.3/alpine3.21 → 13-3.3/alpine3.21
   # =============================================================================
@@ -126,6 +134,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 8
       manual_parallel: 6  
       push_pr_parallel: 4
@@ -146,6 +155,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 8
       manual_parallel: 6
       push_pr_parallel: 4
@@ -153,19 +163,20 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-  # Step 2: Alpine 3.22 with older PostGIS versions (priority: medium - depends on Legacy)
-  alpine-2arch-3-22:
-    name: "3.22 [3/6]"
+  # Step 2a: Alpine 3.22 with PostGIS 3.6 (priority: medium - depends on Legacy)
+  alpine-2arch-3-22-3-6:
+    name: "3.22-3.6 [3/7]"
     needs: alpine-8arch-legacy
     uses: ./.github/workflows/template-workflow-multiarch.yml
     with:
-      workflow_name: "3.22 [3/6]"
+      workflow_name: "3.22-3.6 [3/7]"
       supported_architectures: '["amd64", "arm64"]'
-      image_directories: '["18-3.6/alpine3.22", "17-3.6/alpine3.22", "17-3.4/alpine3.22", "16-3.4/alpine3.22", "15-3.4/alpine3.22", "14-3.4/alpine3.22", "13-3.4/alpine3.22"]'
+      image_directories: '["18-3.6/alpine3.22", "17-3.6/alpine3.22"]'
       target_branch: "manifest"
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
@@ -173,19 +184,41 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-  # Step 3: Alpine 3.21 with PostGIS 3.5 (priority: low - depends on 3.22)
-  alpine-2arch-3-21-3-5:
-    name: "3.21-3.5 [4/6]"
-    needs: alpine-2arch-3-22
+  # Step 2b: Alpine 3.22 with PostGIS 3.4 (priority: medium - depends on 3.6)
+  alpine-2arch-3-22-3-4:
+    name: "3.22-3.4 [4/7]"
+    needs: alpine-2arch-3-22-3-6
     uses: ./.github/workflows/template-workflow-multiarch.yml
     with:
-      workflow_name: "3.21-3.5 [4/6]"
+      workflow_name: "3.22-3.4 [4/7]"
+      supported_architectures: '["amd64", "arm64"]'
+      image_directories: '["17-3.4/alpine3.22", "16-3.4/alpine3.22", "15-3.4/alpine3.22", "14-3.4/alpine3.22", "13-3.4/alpine3.22"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
+      schedule_parallel: 4
+      manual_parallel: 3
+      push_pr_parallel: 2
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # Step 3: Alpine 3.21 with PostGIS 3.5 (priority: low - depends on 3.22-3.4)
+  alpine-2arch-3-21-3-5:
+    name: "3.21-3.5 [5/7]"
+    needs: alpine-2arch-3-22-3-4
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "3.21-3.5 [5/7]"
       supported_architectures: '["amd64", "arm64"]'
       image_directories: '["17-3.5/alpine3.21", "16-3.5/alpine3.21", "15-3.5/alpine3.21", "14-3.5/alpine3.21", "13-3.5/alpine3.21"]'
       target_branch: "manifest"
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
@@ -195,17 +228,18 @@ jobs:
 
   # Step 4: Alpine 3.21 with PostGIS 3.4 (priority: lowest - depends on 3.5)
   alpine-2arch-3-21-3-4:
-    name: "3.21-3.4 [5/6]"
+    name: "3.21-3.4 [6/7]"
     needs: alpine-2arch-3-21-3-5
     uses: ./.github/workflows/template-workflow-multiarch.yml
     with:
-      workflow_name: "3.21-3.4 [5/6]"
+      workflow_name: "3.21-3.4 [6/7]"
       supported_architectures: '["amd64", "arm64"]'
       image_directories: '["17-3.4/alpine3.21", "16-3.4/alpine3.21", "15-3.4/alpine3.21", "14-3.4/alpine3.21", "13-3.4/alpine3.21"]'
       target_branch: "manifest"
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
@@ -215,17 +249,18 @@ jobs:
 
   # Step 5: Alpine 3.21 with PostGIS 3.3 (priority: legacy - depends on 3.4)
   alpine-2arch-3-21-3-3:
-    name: "3.21-3.3 [6/6]"
+    name: "3.21-3.3 [7/7]"
     needs: alpine-2arch-3-21-3-4
     uses: ./.github/workflows/template-workflow-multiarch.yml
     with:
-      workflow_name: "3.21-3.3 [6/6]"
+      workflow_name: "3.21-3.3 [7/7]"
       supported_architectures: '["amd64", "arm64"]'
       image_directories: '["16-3.3/alpine3.21", "15-3.3/alpine3.21", "14-3.3/alpine3.21", "13-3.3/alpine3.21"]'
       target_branch: "manifest"
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2

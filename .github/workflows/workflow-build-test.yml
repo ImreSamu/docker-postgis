@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Test | Docker Multi-Arch Build Workflow
+# Minimal test workflow for fast feedback - 1 step, 4 architectures
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - manifest  # Test branch
+    paths:
+      - '.github/workflows/workflow-build-test.yml'
+      - '.github/workflows/template-workflow-multiarch.yml'
+      - 'test/**'
+      # Test paths - minimal coverage
+      - '17-3.5/alpine3.22/**'
+      - '16-3.5/alpine3.22/**'
+  pull_request:
+    paths:
+      - '.github/workflows/workflow-build-test.yml'
+      - '.github/workflows/template-workflow-multiarch.yml'
+      - 'test/**'
+      # Test paths - minimal coverage
+      - '17-3.5/alpine3.22/**'
+      - '16-3.5/alpine3.22/**'
+
+env:
+  WORKFLOW_CACHE_ID: "tst"  # Test workflow cache identifier
+
+jobs:
+  # =============================================================================
+  # TEST MULTI-ARCHITECTURE BUILD PIPELINE (1 STEP)
+  # =============================================================================
+  # 
+  # This workflow tests Docker images for 4 architectures in a single step
+  # for fast feedback on critical functionality.
+  #
+  # ARCHITECTURES:
+  #   - amd64 (native) - Production architecture
+  #   - arm64 (native) - Production architecture
+  #   - armv7 (qemu) - QEMU emulation test
+  #   - 386 (qemu) - QEMU emulation test
+  #
+  # IMAGES:
+  #   - 17-3.5/alpine3.22 - PostgreSQL 17 + PostGIS 3.5 (latest stable)
+  #   - 16-3.5/alpine3.22 - PostgreSQL 16 + PostGIS 3.5 (LTS)
+  #
+  # PURPOSE:
+  #   - Test native builds (amd64, arm64)
+  #   - Test QEMU emulation (armv7, 386)
+  #   - Test cache system functionality
+  #   - Test template workflow integration
+  #   - Fast feedback (~10-15 minutes vs 2+ hours for full Alpine workflow)
+  # =============================================================================
+
+  # Single step: Test critical functionality with minimal resource usage
+  test-critical:
+    name: "Test [1/1]"
+    uses: ./.github/workflows/template-workflow-multiarch.yml
+    with:
+      workflow_name: "Test [1/1]"
+      supported_architectures: '["amd64", "arm64", "armv7", "386"]'
+      image_directories: '["17-3.5/alpine3.22", "16-3.5/alpine3.22"]'
+      target_branch: "manifest"
+      registry: "docker.io"
+      repo_name: "imresamu"
+      image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
+      schedule_parallel: 4
+      manual_parallel: 3
+      push_pr_parallel: 2
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+# =============================================================================
+# TEST WORKFLOW BENEFITS:
+# =============================================================================
+# 
+# 1. FAST FEEDBACK:
+#    - Single step vs 7 steps (Alpine workflow)
+#    - 2 images vs 27 images (Alpine workflow)
+#    - ~10-15 minutes vs 2+ hours execution time
+#
+# 2. CRITICAL COVERAGE:
+#    - Native builds: amd64, arm64 (production architectures)
+#    - QEMU builds: armv7, 386 (emulation testing)
+#    - Latest stable versions: PostgreSQL 17+16, PostGIS 3.5
+#    - Cache system: Unique "tst" namespace
+#
+# 3. TEMPLATE VALIDATION:
+#    - Tests template-workflow-multiarch.yml functionality
+#    - Validates cache isolation system
+#    - Confirms debug logging works
+#    - Tests both native and QEMU builds
+#
+# 4. RESOURCE EFFICIENCY:
+#    - Conservative parallelism (2-4 parallel builds)
+#    - Minimal Docker Hub API usage
+#    - Efficient cache utilization
+#    - Quick CI feedback loop
+#
+# 5. DEVELOPMENT WORKFLOW:
+#    - Test changes before full Alpine workflow
+#    - Catch issues early in development
+#    - Validate template modifications
+#    - Debug cache conflicts quickly
+# =============================================================================

@@ -55,6 +55,8 @@ on:
       - '17-3.5/bullseye/**'
 #multi-arch-paths-end
 
+env:
+  WORKFLOW_CACHE_ID: "deb"  # Debian workflow cache identifier
 
 jobs:
   # =============================================================================
@@ -92,6 +94,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 6
       manual_parallel: 4
       push_pr_parallel: 2
@@ -112,6 +115,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
@@ -129,6 +133,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}

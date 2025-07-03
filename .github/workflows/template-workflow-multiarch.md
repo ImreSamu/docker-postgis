@@ -47,6 +47,7 @@ The `template-workflow-multiarch.yml` serves as a reusable workflow template tha
 | `schedule_parallel` | No | `8` | Max parallel builds for scheduled runs |
 | `manual_parallel` | No | `6` | Max parallel builds for manual runs |
 | `push_pr_parallel` | No | `4` | Max parallel builds for push/PR runs |
+| `workflow_cache_id` | Yes | - | Unique 3-character workflow cache identifier (alp, deb, dev) |
 
 #### Required Secrets
 
@@ -67,6 +68,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: "deb"
       schedule_parallel: 6
       manual_parallel: 4
       push_pr_parallel: 2
@@ -232,8 +234,9 @@ The workflow uses descriptive emoji-based job names:
 ## Performance Optimizations
 
 ### Build Optimizations
-- **GitHub Actions Cache**: Persistent build cache with architecture-specific scoping
+- **GitHub Actions Cache**: Persistent build cache with workflow + architecture-specific scoping
 - **Docker Layer Caching**: Faster subsequent builds with zstd compression
+- **Workflow Cache Isolation**: Each workflow (alp/deb/dev) has unique cache namespace to prevent conflicts
 - **Native ARM Runners**: Direct ARM64 execution without emulation
 - **Advanced QEMU Setup**: Gold standard QEMU configuration for cross-platform builds
 - **QEMU Only When Needed**: Conditional QEMU setup based on build type
@@ -289,6 +292,113 @@ push_pr_parallel: 2     # Match architecture count
 - **Reduced API Calls**: 75% fewer Docker Hub API calls
 - **Conditional Push**: Only push when appropriate branch/event
 - **Efficient Manifest Creation**: Single job instead of matrix
+
+### Cache Strategy (Updated July 2025)
+
+#### Workflow Cache Isolation
+To prevent cache conflicts when multiple workflows run simultaneously, the template implements a **unique cache namespace system**:
+
+**Cache Tag Format:**
+```yaml
+ghcr.io/imresamu/postgistest-cache-${arch}:${workflow_id}-${family}-${pg}-${week}
+```
+
+**Workflow Identifiers:**
+- **Alpine**: `alp` - Alpine-based image builds
+- **Debian**: `deb` - Debian-based image builds
+- **Development**: `dev` - Development/experimental builds
+
+**Cache Examples:**
+```yaml
+# Alpine workflow cache:
+ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-17-2025-W27
+
+# Debian workflow cache:
+ghcr.io/imresamu/postgistest-cache-amd64:deb-debian-17-2025-W27
+
+# Development workflow cache:
+ghcr.io/imresamu/postgistest-cache-amd64:dev-alpine-17-2025-W27
+```
+
+#### Cache Strategy Benefits
+- **Parallel Execution**: No cache write conflicts between workflows
+- **Week-based Rotation**: Automatic cleanup with ISO week tags (e.g., `2025-W27`)
+- **Architecture Isolation**: Each architecture has its own cache repository
+- **Workflow Isolation**: Each workflow has unique cache namespace
+- **Efficient Sharing**: Read cache still shares within workflow families
+- **Backward Compatibility**: Previous week cache remains accessible
+
+#### Implementation
+Each workflow defines its cache identifier in the environment:
+```yaml
+env:
+  WORKFLOW_CACHE_ID: "alp"  # or "deb" or "dev"
+```
+
+The template automatically uses this ID for all cache operations, ensuring complete isolation between workflows while maintaining efficient cache sharing within each workflow family.
+
+### Cache Debug and Monitoring (Added July 2025)
+
+The template includes comprehensive debug logging for cache operations to provide full visibility into the new cache isolation system:
+
+#### Debug Information Levels
+
+**1. Early Configuration Debug**
+```yaml
+=== Cache Configuration Debug ===
+Workflow Cache ID: alp
+Image Directory: 17-3.5/alpine3.22
+Cache Repository: ghcr.io/imresamu/postgistest-cache
+Week Tag: 2025-W27
+Cache Format: {CACHE_REPO}-{ARCH}:{WORKFLOW_ID}-{FAMILY}-{PG_MAJOR}-{WEEK}
+```
+
+**2. Pre-Build Cache Tag Generation**
+```yaml
+=== Generated Cache Image Names ===
+Read-Only Cache (broad): ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine
+Read-Write Cache (unique): ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-17-2025-W27
+Previous Week Cache (fallback): ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-17-2025-W26
+```
+
+**3. Post-Build Cache Operation Results**
+```yaml
+=== Cache Operation Results ===
+Build completed for: 17-3.5/alpine3.22 on amd64
+Cache Images Used: [detailed cache targets]
+Cache Hit/Miss Analysis: References to buildkit 'CACHED' vs 'DONE' indicators
+Cache Repository Status: Verification of cache accessibility
+```
+
+**4. Final Cache Summary**
+```yaml
+=== Build Job Cache Summary ===
+Job: amd64 | 17-3.5/alpine3.22
+Workflow: alp (Recent [1/7])
+Cache written to: ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-17-2025-W27
+Cache Namespace Summary: All isolation levels confirmed
+```
+
+#### Debug Benefits
+- **Full Cache Visibility**: Exact cache image names at every step
+- **Strategy Validation**: Confirms all isolation levels are working
+- **Troubleshooting Support**: References to buildkit cache indicators
+- **Repository Status**: Verifies cache accessibility and existence
+- **Workflow Isolation Confirmation**: Prevents namespace conflicts
+- **Performance Insights**: Enables cache hit/miss analysis
+
+#### Locating Debug Information
+All cache debug information appears as separate workflow steps:
+- `Debug - Check matrix variables and cache configuration`
+- `Debug - Cache tags and configuration` (before build)
+- `Debug - Cache operation results` (after build)
+- `Debug - Final cache summary` (end of job)
+
+This comprehensive debugging enables administrators to:
+- Verify cache isolation is working correctly
+- Troubleshoot cache-related build issues
+- Monitor cache effectiveness across workflows
+- Validate the new cache strategy implementation
 
 ## Advanced QEMU Configuration
 
@@ -510,6 +620,8 @@ image_directories: [
 - **Status**: Active multi-architecture Alpine builds (8 architectures with advanced QEMU)
 - **Schedule**: Tuesday 02:00 UTC (`cron: '0 2 * * 2'`)
 - **Architecture Count**: 8 (amd64, arm64, armv6, armv7, 386, ppc64le, riscv64, s390x)
+- **Steps**: 7 sequential steps with PostGIS version isolation to prevent cache conflicts
+- **Cache Optimization**: Each step uses unique PostGIS versions (3.6, 3.5, 3.4, 3.3)
 - **QEMU Enhancement**: s390x re-enabled with gold standard QEMU configuration
 
 #### `workflow-build-development.yml` - Development Build Group (Active)  
@@ -555,11 +667,11 @@ The `template-workflow-multiarch.yml` is currently used by these active workflow
 
 ### Current Parallel Configuration
 
-| Workflow | Trigger | Schedule | Manual | Push/PR | Architecture Count |
-|----------|---------|----------|--------|---------|--------------------|
-| **`workflow-build-debian.yml`** | Monday 02:00 UTC | 6 | 4 | 2 | 2 architectures (3 steps) |
-| **`workflow-build-alpine.yml`** | Tuesday 02:00 UTC | 8 | 6 | 4 | 8 architectures (6 steps) - s390x restored with QEMU fixes |
-| **`workflow-build-development.yml`** | Wednesday 02:00 UTC | 4 | 3 | 2 | 2+1 architectures (3 steps) |
+| Workflow | Trigger | Schedule | Manual | Push/PR | Architecture Count | Cache ID |
+|----------|---------|----------|--------|---------|--------------------|---------|
+| **`workflow-build-debian.yml`** | Monday 02:00 UTC | 6 | 4 | 2 | 2 architectures (3 steps) | `deb` |
+| **`workflow-build-alpine.yml`** | Tuesday 02:00 UTC | 8 | 6 | 4 | 8 architectures (7 steps) | `alp` |
+| **`workflow-build-development.yml`** | Wednesday 02:00 UTC | 4 | 3 | 2 | 2+1 architectures (3 steps) | `dev` |
 
 ### Resource Utilization by Scenario
 

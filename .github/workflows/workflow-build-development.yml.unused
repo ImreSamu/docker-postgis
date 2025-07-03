@@ -43,6 +43,9 @@ on:
       - '18-recent/bookworm/**'
 #multi-arch-paths-end
 
+env:
+  WORKFLOW_CACHE_ID: "dev"  # Development workflow cache identifier
+
 jobs:
   # =============================================================================
   # OTHER MULTI-ARCHITECTURE BUILD PIPELINE (3 STEPS)
@@ -76,6 +79,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
@@ -96,6 +100,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
@@ -116,6 +121,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
+      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
