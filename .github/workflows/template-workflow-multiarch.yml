@@ -471,7 +471,7 @@ jobs:
         ARCH: ${{ matrix.arch_variant }}                               # amd64, arm64 …
         # Extract distro and PG major from the directory name
         FAMILY: ${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}
-        PG_MAJOR: ${{ split(matrix.image_dir, '-')[0] }}                # "16" in 16-3.3/alpine3.21
+        PG_MAJOR: ${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}                # "16" in 16-3.3/alpine3.21
         # Shared read-only cache (workflow + arch + family)
         RO_CACHE: ${{ env.CACHE_REPO }}-${{ env.ARCH }}:${{ env.WORKFLOW_CACHE_ID }}-${{ env.FAMILY }}
         # Unique write cache (workflow + arch + family + pg + week)
