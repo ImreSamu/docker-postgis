@@ -27,8 +27,13 @@ ARG PGIS1_PG_HINT_PLAN_CHECKOUT_SHA1=85e07af6ca4675a26fa2281370c37371b883b2a9
 
 ARG PGIS1_DUCKDB_CHECKOUT=tags/v1.3.1
 
+# Multi-architecture build arguments (passed from GitHub Actions workflow)
+# Bundle images use production-level optimization for geospatial extension compilation
+ARG PGIS1_OPTIMIZATION_FLAGS=" -O3 -mtune=generic "    # Compiler optimization for bundle extensions
+ARG PGIS1_LTO_FLAGS=""                                  # Link-time optimization (passed from workflow)
+ARG PGIS1_REGRESSION_MODE=""                            # Regression test mode (passed from workflow)
+
 # usable for forking the image
-ARG PGIS1_OPTIMIZATION_FLAGS=" -O3 -mtune=generic "
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
 

@@ -8,6 +8,13 @@ ARG PGIS1_POSTGRES_MAJOR=13
 ARG PGIS1_POSTGIS_VERSION=3.5.2+dfsg-1.pgdg110+1
 ARG PGIS1_POSTGIS_MAJOR=3
 
+# Multi-architecture build arguments (passed from GitHub Actions workflow for labeling only)
+# Note: Debian images use pre-compiled packages, so optimization/compilation flags are not used
+ARG PGIS1_REGRESSION_MODE=""        # PostGIS regression test mode (stored in labels for consistency)
+ARG PGIS1_OPTIMIZATION_FLAGS=""     # Compiler optimization flags (not used - Debian packages are pre-compiled)
+ARG PGIS1_LTO_FLAGS=""              # Link-time optimization flags (not used - Debian packages are pre-compiled)
+ARG PGIS1_POSTGIS_REPOSITORY=""     # PostGIS source repository URL (stored in labels for consistency)
+
 # usable for forking the image
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
@@ -27,7 +34,7 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.opencontainers.image.version="${PGIS1_POSTGIS_VERSION}" \
       org.opencontainers.image.base.name="${PGIS1_BASE_IMAGE}" \
       \
-      # child friendly image labels, so some duplacted labels expected
+      # child friendly image labels, so some duplicated labels expected
       org.postgis.base.maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.base.description="PostGIS ${PGIS1_POSTGIS_VERSION} spatial database extension with PostgreSQL ${PGIS1_POSTGRES_MAJOR} bullseye" \
       org.postgis.base.source="${PGIS1_SOURCE_REPO}" \
@@ -45,6 +52,8 @@ ENV POSTGIS_VERSION=${PGIS1_POSTGIS_VERSION}
 
 RUN set -eux \
     # Export Debian package environment for child images
+    # This enables child images to use the same package versions for consistency
+    # Usage in child images: source /usr/local/share/docker-postgis-env.sh
     && apt-get update \
     && POSTGIS_PACKAGE_VERSION=$(apt-cache madison postgresql-$PG_MAJOR-postgis-$POSTGIS_MAJOR | head -1 | awk '{print $3}') \
     && echo "export POSTGIS_PACKAGE_VERSION=${POSTGIS_PACKAGE_VERSION}" > /usr/local/share/docker-postgis-env.sh \

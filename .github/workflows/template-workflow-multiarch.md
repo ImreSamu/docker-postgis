@@ -225,8 +225,17 @@ The template automatically passes these build arguments to Dockerfiles:
 
 ### Standard Arguments
 - `PGIS1_REGRESSION_MODE`: Controls regression test behavior (skip, skip_nojit, test, test_nojit, require)
+  - **Alpine/Master templates**: Controls actual PostGIS regression testing during build
+  - **Debian template**: Stored in labels only (Debian uses pre-compiled packages)
+  - **Bundle template**: Inherited from base image, stored in labels
 - `PGIS1_OPTIMIZATION_FLAGS`: Compiler optimization level (-O1 or -O3 with architecture-specific flags)
+  - **Alpine/Master templates**: Used for PostGIS compilation from source (`CFLAGS="${PGIS1_OPTIMIZATION_FLAGS}"`)
+  - **Debian template**: Not used for compilation (pre-compiled packages), stored in labels for consistency
+  - **Bundle template**: Used for compiling additional geospatial extensions
 - `PGIS1_LTO_FLAGS`: Link-time optimization settings (enabled for production architectures)
+  - **Alpine/Master templates**: Used during PostGIS configure step (`${PGIS1_LTO_FLAGS}`)
+  - **Debian template**: Not used (pre-compiled packages), stored in labels for consistency
+  - **Bundle template**: Used for extension compilation when applicable
 
 ### Registry Arguments (for Bundle Images)
 - `REGISTRY`: Docker registry URL (e.g., `docker.io`) - only populated for bundle builds
@@ -238,16 +247,28 @@ These build arguments are automatically converted to Docker labels in the final 
 
 #### Standard PostGIS Labels
 - `org.postgis.base.optimization.flags`: Compiler optimization level
+  - **Alpine/Master**: Actual compilation flags used (`-O3` for production, `-O1` for experimental)
+  - **Debian**: Pre-compiled package optimization level (stored for consistency)
 - `org.postgis.base.lto.flags`: Link-time optimization settings
+  - **Alpine/Master**: Actual LTO flags used (`--enable-lto` for production architectures)
+  - **Debian**: LTO status of pre-compiled packages (stored for consistency)
 - `org.postgis.base.jit.status`: PostgreSQL JIT status (`enabled` or `disabled`)
+  - **All templates**: Reflects JIT configuration for end users
 - `org.postgis.base.regression.mode`: Regression test mode used
+  - **Alpine/Master**: Actual test mode executed during build
+  - **Debian**: Test mode that would be used (stored for consistency)
 
 #### Bundle Image Labels  
-- `org.postgis.bundle0.optimization.flags`: Bundle-specific optimization flags
-- `org.postgis.bundle0.lto.flags`: Bundle-specific LTO settings
-- `org.postgis.bundle0.jit.status`: Bundle-specific JIT status
+- `org.postgis.bundle0.optimization.flags`: Bundle-specific optimization flags used for extension compilation
+- `org.postgis.bundle0.lto.flags`: Bundle-specific LTO settings for extension compilation
+- `org.postgis.bundle0.jit.status`: Bundle-specific JIT status inherited from base image
 
 **JIT Status Logic**: JIT is automatically disabled (`disabled`) for architectures using `test_nojit` or `skip_nojit` modes, and enabled (`enabled`) for all others.
+
+**Template-Specific Behavior**:
+- **Alpine/Master templates**: Labels reflect actual build-time compilation settings
+- **Debian template**: Labels store equivalent settings for consistency, but compilation flags don't affect the pre-compiled packages
+- **Bundle template**: Labels reflect settings used for additional extension compilation
 
 ## Job Naming Convention
 
@@ -350,13 +371,17 @@ ${cache_registry}/${cache_repo_owner}/${cache_image_name}-${arch}:${workflow_id}
 
 **Cache Examples:**
 ```yaml
-# Alpine workflow cache (PostgreSQL 17):
+# Alpine workflow cache (PostgreSQL 17, dynamically extracted):
 ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-pg17-2025-W27
 ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-pg17-2025-W26  # fallback
 
-# Debian workflow cache (PostgreSQL 16):
+# Debian workflow cache (PostgreSQL 16, dynamically extracted):
 ghcr.io/imresamu/postgistest-cache-amd64:deb-debian-pg16-2025-W27
 ghcr.io/imresamu/postgistest-cache-amd64:deb-debian-pg16-2025-W26  # fallback
+
+# Future PostgreSQL versions (automatically supported):
+ghcr.io/imresamu/postgistest-cache-amd64:alp-alpine-pg19-2025-W27  # PostgreSQL 19
+ghcr.io/imresamu/postgistest-cache-amd64:deb-debian-pg20-2025-W27  # PostgreSQL 20
 ```
 
 #### Cache Strategy Benefits
@@ -658,12 +683,27 @@ image_directories: [
 ```
 
 #### `workflow-build-alpine.yml` - Alpine Build Group (Active)
-- **Status**: Active multi-architecture Alpine builds (8 architectures with advanced QEMU)
-- **Schedule**: Tuesday 02:00 UTC (`cron: '0 2 * * 2'`)
-- **Architecture Count**: 8 (amd64, arm64, armv6, armv7, 386, ppc64le, riscv64, s390x)
-- **Steps**: 7 sequential steps with PostGIS version isolation to prevent cache conflicts
-- **Cache Optimization**: Each step uses unique PostGIS versions (3.6, 3.5, 3.4, 3.3)
-- **QEMU Enhancement**: s390x re-enabled with gold standard QEMU configuration
+**Schedule**: Tuesday 02:00 UTC (`cron: '0 2 * * 2'`)
+
+The Alpine workflow builds Docker images for **8 architectures** across **7 priority-based sequential steps** with descending PostgreSQL version order (18→13):
+
+| Step | Name | Dependencies | PostgreSQL Versions | Architectures | Image Count | Purpose |
+|------|------|--------------|-------------------|---------------|-------------|---------|
+| **1** | `Recent [1/7]` | None | 18 → 17 → 16 | 8 architectures | 3 directories | **Latest releases** - highest priority |
+| **2** | `Legacy [2/7]` | Needs: Recent | 15 → 14 → 13 | 8 architectures | 3 directories | **Older PostgreSQL** - high priority |
+| **3** | `3.22-3.6 [3/7]` | Needs: Legacy | 18 → 17 | 2 architectures | 2 directories | **PostGIS 3.6** - medium priority |
+| **4** | `3.22-3.4 [4/7]` | Needs: 3.22-3.6 | 17 → 16 → 15 → 14 → 13 | 2 architectures | 5 directories | **PostGIS 3.4** - medium priority |
+| **5** | `3.21-3.5 [5/7]` | Needs: 3.22-3.4 | 17 → 16 → 15 → 14 → 13 | 2 architectures | 5 directories | **Alpine 3.21** - low priority |
+| **6** | `3.21-3.4 [6/7]` | Needs: 3.21-3.5 | 17 → 16 → 15 → 14 → 13 | 2 architectures | 5 directories | **Alpine 3.21** - low priority |
+| **7** | `3.21-3.3 [7/7]` | Needs: 3.21-3.4 | 16 → 15 → 14 → 13 | 2 architectures | 4 directories | **Legacy PostGIS** - lowest priority |
+
+**Key Features:**
+- **Architecture Support**: 8 architectures (amd64, arm64, armv6, armv7, 386, ppc64le, riscv64, s390x)
+- **PostGIS Version Isolation**: Each step uses unique PostGIS versions to prevent cache conflicts
+- **Priority Execution**: Latest PostgreSQL/PostGIS combinations processed first
+- **Step Progression**: Full 8-arch builds → Limited 2-arch builds for older combinations
+- **Cache Optimization**: Workflow cache ID `"alp"` with complete isolation
+- **QEMU Enhancement**: Advanced QEMU configuration for exotic architectures (s390x, mips64le)
 
 #### `workflow-build-development.yml` - Development Build Group (Active)  
 - **Status**: Active development builds (Master/Recent/Locked)

@@ -9,10 +9,10 @@ ARG PGIS1_OPTIMIZATION_FLAGS="-O3 -Wall -fno-omit-frame-pointer"
 ARG PGIS1_SOURCE_REPO="https://github.com/postgis/docker-postgis"
 ARG PGIS1_MAINTAINER="PostGIS Project - https://postgis.net - ${PGIS1_SOURCE_REPO}/issues"
 
-# Regression testing mode: skip, test, require
+# Regression testing mode: require (must pass), test (non-blocking), test_nojit (JIT disabled), skip (no tests), skip_nojit (no tests, JIT disabled)
 ARG PGIS1_REGRESSION_MODE=require
 
-# LTO flags per architecture (empty for experimental architectures)
+# Link-time optimization flags: --enable-lto for production architectures, empty for experimental architectures
 ARG PGIS1_LTO_FLAGS="--enable-lto"
 
 FROM ${PGIS1_BASE_IMAGE}
@@ -34,7 +34,7 @@ LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.opencontainers.image.revision="${PGIS1_POSTGIS_CHECKOUT_SHA1}" \
       org.opencontainers.image.base.name="${PGIS1_BASE_IMAGE}" \
       \
-      # child friendly image labels, so some duplacted labels expected
+      # child friendly image labels, so some duplicated labels expected
       org.postgis.base.maintainer="${PGIS1_MAINTAINER}" \
       org.postgis.base.description="PostGIS ${PGIS1_POSTGIS_CHECKOUT} spatial database extension with PostgreSQL {{ .[env.variant].PG_MAJOR }} {{ env.variant }}" \
       org.postgis.base.source="${PGIS1_SOURCE_REPO}" \

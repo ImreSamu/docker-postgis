@@ -436,7 +436,8 @@ jobs:
     # - Architecture isolation: Each arch writes to separate cache repository
     # - PostgreSQL isolation: Each PG major version has unique cache tag
     # - Week-based rotation: ISO week provides automatic cache cleanup
-    # - Format: ${workflow_id}-${family}-${pg}-${week}
+    # - Format: ${workflow_id}-${family}-pg${major}-${week}
+    # - Examples: alp-alpine-pg17-2025-W27, deb-debian-pg16-2025-W27
     # - Read cache: Broad sharing within workflow+arch+family
     # - Write cache: Unique per workflow+arch+family+pg+week
     # - Result: No cache conflicts even with maximum parallel workflows
@@ -489,17 +490,27 @@ jobs:
         echo "• Cache retention: Weekly rotation with automatic cleanup"
         echo "================================"
 
+    - name: Extract PostgreSQL version dynamically
+      id: extract-pg-version
+      run: |
+        # Extract PostgreSQL major version from directory name using cut (e.g., "17-3.5/alpine3.22" → "17")
+        PG_MAJOR=$(echo "${{ matrix.image_dir }}" | cut -d'-' -f1)
+        # Fallback to '17' if extraction fails or gives empty result
+        PG_MAJOR=${PG_MAJOR:-17}
+        echo "pg_major=$PG_MAJOR" >> $GITHUB_OUTPUT
+        echo "PostgreSQL major version extracted: $PG_MAJOR"
+
     - name: Build Docker image
       uses: docker/build-push-action@v6
       env:
         ARCH: ${{ matrix.arch_variant }}                               # amd64, arm64 …
-        # Extract distro and PG major from the directory name
+        # Extract distro and PG major from directory name (e.g., "17-3.5/alpine3.22" → "alpine", "17")
         FAMILY: ${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}
-        PG_MAJOR: ${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}                # "16" in 16-3.3/alpine3.21
+        PG_MAJOR: ${{ steps.extract-pg-version.outputs.pg_major }}
         # Current week cache (read + write)
-        RW_CACHE: ${{ env.CACHE_REPO }}-${{ matrix.arch_variant }}:${{ env.WORKFLOW_CACHE_ID }}-${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}-pg${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}-${{ steps.iso-weeks.outputs.current_week }}
+        RW_CACHE: ${{ env.CACHE_REPO }}-${{ matrix.arch_variant }}:${{ env.WORKFLOW_CACHE_ID }}-${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}-pg${{ steps.extract-pg-version.outputs.pg_major }}-${{ steps.iso-weeks.outputs.current_week }}
         # Previous ISO week cache for fallback (read-only)
-        RO_CACHE_PREV1W: ${{ env.CACHE_REPO }}-${{ matrix.arch_variant }}:${{ env.WORKFLOW_CACHE_ID }}-${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}-pg${{ startsWith(matrix.image_dir, '13-') && '13' || startsWith(matrix.image_dir, '14-') && '14' || startsWith(matrix.image_dir, '15-') && '15' || startsWith(matrix.image_dir, '16-') && '16' || startsWith(matrix.image_dir, '17-') && '17' || startsWith(matrix.image_dir, '18-') && '18' || '17' }}-${{ steps.iso-weeks.outputs.prev_week }}
+        RO_CACHE_PREV1W: ${{ env.CACHE_REPO }}-${{ matrix.arch_variant }}:${{ env.WORKFLOW_CACHE_ID }}-${{ contains(matrix.image_dir, 'alpine') && 'alpine' || 'debian' }}-pg${{ steps.extract-pg-version.outputs.pg_major }}-${{ steps.iso-weeks.outputs.prev_week }}
 
       with:
         context: ${{ matrix.image_dir }}
@@ -509,6 +520,12 @@ jobs:
         pull: true
         load: true
         tags: ${{ steps.generate-tags.outputs.short_tags }}
+        # Build arguments passed to Dockerfile:
+        # - PGIS1_REGRESSION_MODE: Controls PostGIS regression testing (require/test/skip/test_nojit/skip_nojit)
+        # - PGIS1_OPTIMIZATION_FLAGS: Compiler optimization level (-O1 for QEMU, -O3 for native)
+        # - PGIS1_LTO_FLAGS: Link-time optimization (enabled for production architectures only)
+        # - REGISTRY/REPO_NAME: Only populated for bundle images to reference base images
+        # - IMAGE_NAME: Architecture-specific image name for multi-arch builds
         build-args: |
           BUILDKIT_INLINE_CACHE=1
           PGIS1_REGRESSION_MODE=${{ matrix.regression_mode }}
@@ -746,6 +763,8 @@ jobs:
               [[ -z "$SOURCE_TAGS" ]] && SOURCE_TAGS="$ARCH_TAG" || SOURCE_TAGS="$SOURCE_TAGS $ARCH_TAG"
             done
 
+            # Create multi-architecture manifest using optimized approach (75% fewer API calls)
+            # This single command replaces: manifest rm, create, annotate (per arch), push
             docker buildx imagetools create -t "$MANIFEST_TAG" $SOURCE_TAGS
             docker buildx imagetools inspect "$MANIFEST_TAG"
           done

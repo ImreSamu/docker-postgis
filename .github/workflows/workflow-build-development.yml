@@ -48,7 +48,7 @@ env:
 
 jobs:
   # =============================================================================
-  # OTHER MULTI-ARCHITECTURE BUILD PIPELINE (3 STEPS)
+  # DEVELOPMENT MULTI-ARCHITECTURE BUILD PIPELINE (3 STEPS)
   # =============================================================================
   # 
   # This workflow builds Docker images for 2 architectures (amd64, arm64) across
@@ -79,7 +79,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
-      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
+      workflow_cache_id: "dev"
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
@@ -100,7 +100,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
-      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
+      workflow_cache_id: "dev"
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
@@ -121,7 +121,7 @@ jobs:
       registry: "docker.io"
       repo_name: "imresamu"
       image_name: "postgistest"
-      workflow_cache_id: ${{ env.WORKFLOW_CACHE_ID }}
+      workflow_cache_id: "dev"
       schedule_parallel: 4
       manual_parallel: 3
       push_pr_parallel: 2
