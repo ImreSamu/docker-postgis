@@ -58,28 +58,51 @@ jobs:
     
     steps:
       - name: "🔍 Debug retry conditions | ${{ inputs.workflow_name }}"
+        env:
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          MAX_ATTEMPTS: ${{ inputs.max_attempts }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_MATCH: ${{ contains('schedule,workflow_dispatch', github.event_name) }}
         run: |
           echo "=== RETRY CONDITIONS DEBUG ==="
           echo "always(): true (this step is running)"
-          echo "failure(): ${{ failure() }}"
-          echo "success(): ${{ success() }}"
-          echo "cancelled(): ${{ cancelled() }}"
-          echo "github.run_attempt: ${{ github.run_attempt }}"
-          echo "inputs.max_attempts: ${{ inputs.max_attempts }}"
-          echo "github.event_name: ${{ github.event_name }}"
-          echo "contains('schedule,workflow_dispatch', github.event_name): ${{ contains('schedule,workflow_dispatch', github.event_name) }}"
+          echo "github.run_attempt: $RUN_ATTEMPT"
+          echo "inputs.max_attempts: $MAX_ATTEMPTS"
+          echo "github.event_name: $EVENT_NAME"
+          echo "contains('schedule,workflow_dispatch', github.event_name): $EVENT_MATCH"
+          echo "attempt_check (run_attempt < max_attempts): $([ "$RUN_ATTEMPT" -lt "$MAX_ATTEMPTS" ] && echo "true" || echo "false")"
           echo ""
-          echo "=== ORIGINAL CONDITION EVALUATION ==="
-          echo "failure() && github.run_attempt < inputs.max_attempts: ${{ failure() && github.run_attempt < inputs.max_attempts }}"
-          echo "contains('schedule,workflow_dispatch', github.event_name): ${{ contains('schedule,workflow_dispatch', github.event_name) }}"
-          echo "FULL CONDITION: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}"
+          echo "=== JOB STATES (inferred from workflow run) ==="
+          echo "Note: failure(), success(), cancelled() can only be checked in 'if:' conditions"
+          echo "This debug step running means: always() = true"
           echo ""
-          echo "=== DECISION ==="
-          if [[ "${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}" == "true" ]]; then
-            echo "✅ SHOULD RETRY: All conditions met"
-          else
-            echo "❌ SKIP RETRY: Conditions not met"
-          fi
+
+      - name: "🔍 Test failure() condition | ${{ inputs.workflow_name }}"
+        if: ${{ failure() }}
+        run: |
+          echo "✅ FAILURE DETECTED: failure() condition is TRUE"
+          echo "This step only runs if failure() returns true"
+
+      - name: "🔍 Test success() condition | ${{ inputs.workflow_name }}"
+        if: ${{ success() }}
+        run: |
+          echo "✅ SUCCESS DETECTED: success() condition is TRUE"
+          echo "This step only runs if success() returns true"
+
+      - name: "🔍 Test event condition | ${{ inputs.workflow_name }}"
+        if: ${{ contains('schedule,workflow_dispatch', github.event_name) }}
+        run: |
+          echo "✅ EVENT MATCH: Event '${{ github.event_name }}' matches allowed events"
+
+      - name: "🔍 Test attempt condition | ${{ inputs.workflow_name }}"
+        if: ${{ github.run_attempt < inputs.max_attempts }}
+        run: |
+          echo "✅ ATTEMPT OK: Run attempt ${{ github.run_attempt }} < max ${{ inputs.max_attempts }}"
+
+      - name: "🔍 Test FULL condition | ${{ inputs.workflow_name }}"
+        if: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
+        run: |
+          echo "🎯 ALL CONDITIONS MET: Should proceed with retry"
 
       - name: "${{ inputs.workflow_emoji }} Analyze failed builds | ${{ inputs.workflow_name }}"
         if: ${{ inputs.enable_detailed_logging }}
