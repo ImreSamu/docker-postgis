@@ -50,16 +50,37 @@ jobs:
     # Dynamic needs based on input job names
     # Note: GitHub Actions doesn't support dynamic needs, so this will be handled by the calling workflow
     
-    # Only run if:
-    # 1. Any job failed (failure())
-    # 2. We haven't exceeded max attempts
-    # 3. Event type is in allowed list
-    # Note: always() ensures this job runs even when dependencies fail
-    if: ${{ always() && failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
+    # Debug version: Always run to see why retry is skipped
+    # Original condition: always() && failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name)
+    if: ${{ always() }}
     
     runs-on: ubuntu-24.04
     
     steps:
+      - name: "🔍 Debug retry conditions | ${{ inputs.workflow_name }}"
+        run: |
+          echo "=== RETRY CONDITIONS DEBUG ==="
+          echo "always(): true (this step is running)"
+          echo "failure(): ${{ failure() }}"
+          echo "success(): ${{ success() }}"
+          echo "cancelled(): ${{ cancelled() }}"
+          echo "github.run_attempt: ${{ github.run_attempt }}"
+          echo "inputs.max_attempts: ${{ inputs.max_attempts }}"
+          echo "github.event_name: ${{ github.event_name }}"
+          echo "contains('schedule,workflow_dispatch', github.event_name): ${{ contains('schedule,workflow_dispatch', github.event_name) }}"
+          echo ""
+          echo "=== ORIGINAL CONDITION EVALUATION ==="
+          echo "failure() && github.run_attempt < inputs.max_attempts: ${{ failure() && github.run_attempt < inputs.max_attempts }}"
+          echo "contains('schedule,workflow_dispatch', github.event_name): ${{ contains('schedule,workflow_dispatch', github.event_name) }}"
+          echo "FULL CONDITION: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}"
+          echo ""
+          echo "=== DECISION ==="
+          if [[ "${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}" == "true" ]]; then
+            echo "✅ SHOULD RETRY: All conditions met"
+          else
+            echo "❌ SKIP RETRY: Conditions not met"
+          fi
+
       - name: "${{ inputs.workflow_emoji }} Analyze failed builds | ${{ inputs.workflow_name }}"
         if: ${{ inputs.enable_detailed_logging }}
         env:
@@ -125,6 +146,7 @@ jobs:
           echo ""
       
       - name: "${{ inputs.workflow_emoji }} Retry failed builds | ${{ inputs.workflow_name }}"
+        if: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
