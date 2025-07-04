@@ -2,6 +2,10 @@
 name: Development | Docker Multi-Arch Build Workflow
 # Updated test configuration for improved compatibility
 
+permissions:
+  actions: write
+  contents: read
+
 on:
   workflow_dispatch:
   schedule:
@@ -128,3 +132,22 @@ jobs:
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # =============================================================================
+  # AUTO-RETRY FAILED JOBS
+  # =============================================================================
+
+  auto-retry-failed:
+    name: "🔄 Auto-retry failed Development builds"
+    needs:
+      - recent
+      - master
+      - locked
+    uses: ./.github/workflows/template-workflow-auto-retry.yml
+    with:
+      workflow_name: "Development"
+      workflow_emoji: "🔧"
+      job_names: '["recent", "master", "locked"]'
+      workflow_cache_id: "dev"
+      max_attempts: 3
+      enable_detailed_logging: true

@@ -2,6 +2,10 @@
 name: Alpine | Docker Multi-Arch Build Workflow
 # Updated test configuration for improved compatibility
 
+permissions:
+  actions: write
+  contents: read
+
 on:
   workflow_dispatch:
   schedule:
@@ -267,3 +271,26 @@ jobs:
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+  # =============================================================================
+  # AUTO-RETRY FAILED JOBS
+  # =============================================================================
+
+  auto-retry-failed:
+    name: "🔄 Auto-retry failed Alpine builds"
+    needs:
+      - alpine-8arch-recent
+      - alpine-8arch-legacy
+      - alpine-2arch-3-22-3-6
+      - alpine-2arch-3-22-3-4
+      - alpine-2arch-3-21-3-5
+      - alpine-2arch-3-21-3-4
+      - alpine-2arch-3-21-3-3
+    uses: ./.github/workflows/template-workflow-auto-retry.yml
+    with:
+      workflow_name: "Alpine"
+      workflow_emoji: "🏔️"
+      job_names: '["alpine-8arch-recent", "alpine-8arch-legacy", "alpine-2arch-3-22-3-6", "alpine-2arch-3-22-3-4", "alpine-2arch-3-21-3-5", "alpine-2arch-3-21-3-4", "alpine-2arch-3-21-3-3"]'
+      workflow_cache_id: "alp"
+      max_attempts: 3
+      enable_detailed_logging: true

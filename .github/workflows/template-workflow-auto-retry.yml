@@ -1,0 +1,147 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Auto-Retry Failed Jobs Template
+
+# Reusable template for automatic retry of failed workflow jobs
+# This template provides:
+# - Detailed failure analysis and logging
+# - Configurable job dependencies
+# - Automatic retry on transient failures
+# - Support for all workflow types (Alpine, Debian, Development, Test)
+
+on:
+  workflow_call:
+    inputs:
+      workflow_name:
+        description: 'Name of the parent workflow (e.g., Alpine, Debian, Development)'
+        required: true
+        type: string
+      workflow_emoji:
+        description: 'Emoji for the workflow (e.g., 🏔️, 📦, 🔧)'
+        required: false
+        type: string
+        default: '🔄'
+      job_names:
+        description: 'JSON array of job names to wait for (e.g., ["alpine-8arch-recent", "alpine-8arch-legacy"])'
+        required: true
+        type: string
+      workflow_cache_id:
+        description: 'Workflow cache identifier (alp, deb, dev, test)'
+        required: true
+        type: string
+      max_attempts:
+        description: 'Maximum retry attempts (default: 3)'
+        required: false
+        type: number
+        default: 3
+      enable_detailed_logging:
+        description: 'Enable detailed failure analysis logging'
+        required: false
+        type: boolean
+        default: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  auto-retry-failed:
+    name: "${{ inputs.workflow_emoji }} Auto-retry failed jobs | ${{ inputs.workflow_name }} (attempt ${{ github.run_attempt }})"
+    
+    # Dynamic needs based on input job names
+    # Note: GitHub Actions doesn't support dynamic needs, so this will be handled by the calling workflow
+    
+    # Only run if:
+    # 1. Any job failed (failure())
+    # 2. We haven't exceeded max attempts
+    # 3. Event type is in allowed list
+    if: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
+    
+    runs-on: ubuntu-24.04
+    
+    steps:
+      - name: "${{ inputs.workflow_emoji }} Analyze failed builds | ${{ inputs.workflow_name }}"
+        if: ${{ inputs.enable_detailed_logging }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_NAME: ${{ inputs.workflow_name }}
+          WORKFLOW_CACHE_ID: ${{ inputs.workflow_cache_id }}
+          JOB_NAMES: ${{ inputs.job_names }}
+        run: |
+          # shellcheck disable=SC2016
+          echo "${{ inputs.workflow_emoji }} ===== ${{ inputs.workflow_name }} WORKFLOW FAILURE ANALYSIS ====="
+          echo "📊 Run ID: ${{ github.run_id }}"
+          echo "🔢 Attempt: ${{ github.run_attempt }}/${{ inputs.max_attempts }}"
+          echo "📅 Started: $(date -u)"
+          echo "🏷️ Event: ${{ github.event_name }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "🗂️ Cache ID: ${{ inputs.workflow_cache_id }}"
+          echo "👤 Actor: ${{ github.actor }}"
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== WORKFLOW RUN DETAILS ====="
+          gh run view ${{ github.run_id }} --json status,conclusion,createdAt,updatedAt,runNumber,runStartedAt,headBranch,headSha,event,workflowName,displayTitle
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== JOB STATUS BREAKDOWN ====="
+          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | "📋 Job: \(.name)\n   Status: \(.status)\n   Conclusion: \(.conclusion // \"running\")\n   Started: \(.startedAt // \"not started\")\n   Completed: \(.completedAt // \"running\")\n   URL: \(.url)\n"'
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== FAILED JOBS DETAILED ====="
+          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.conclusion == "failure") | "❌ FAILED: \(.name)\n   Started: \(.startedAt)\n   Completed: \(.completedAt)\n   Runner: \(.runnerName // \"unknown\")\n   URL: \(.url)\n"'
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== MATRIX FAILURE ANALYSIS ====="
+          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.conclusion == "failure") | "❌ \(.name)\n   Failed Steps: \(.steps[]? | select(.conclusion == \"failure\") | \"      • \(.name): \(.conclusion)\")\n"'
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== ARCHITECTURE FAILURE STATS ====="
+          gh run view ${{ github.run_id }} --json jobs --jq '
+            [.jobs[] | select(.conclusion == "failure") | .name] as $failed_jobs |
+            ["amd64", "arm64", "armv6", "armv7", "386", "ppc64le", "riscv64", "s390x"] as $archs |
+            $archs[] as $arch |
+            "🏗️ \($arch): \([$failed_jobs[] | select(contains($arch))] | length) failures"
+          '
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== WORKFLOW TIMING ANALYSIS ====="
+          gh api "/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/timing" --jq '
+            "⏱️ Total Duration: \(.run_duration_ms // 0 | . / 1000 | floor)s\n" +
+            "🚀 Billable Time: \(.billable // {} | to_entries[] | "   \(.key): \(.value.total_ms // 0 | . / 1000 | floor)s") \n"
+          '
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== EXPECTED JOBS STATUS ====="
+          echo "Expected jobs for ${{ inputs.workflow_name }} workflow:"
+          echo "${{ inputs.job_names }}" | jq -r '.[] | "📋 \(.)"'
+          echo ""
+          
+          echo "${{ inputs.workflow_emoji }} ===== FAILURE SUMMARY ====="
+          FAILED_COUNT=$(gh run view ${{ github.run_id }} --json jobs --jq '[.jobs[] | select(.conclusion == "failure")] | length')
+          TOTAL_COUNT=$(gh run view ${{ github.run_id }} --json jobs --jq '[.jobs[]] | length')
+          echo "❌ Failed jobs: $FAILED_COUNT"
+          echo "📊 Total jobs: $TOTAL_COUNT"
+          echo "📈 Success rate: $(echo "scale=1; ($TOTAL_COUNT - $FAILED_COUNT) * 100 / $TOTAL_COUNT" | bc -l)%"
+          echo ""
+      
+      - name: "${{ inputs.workflow_emoji }} Retry failed builds | ${{ inputs.workflow_name }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ inputs.workflow_emoji }} ===== STARTING RETRY PROCESS ====="
+          echo "🔄 Retrying failed jobs for ${{ inputs.workflow_name }} workflow..."
+          echo "📊 Run ID: ${{ github.run_id }}"
+          echo "🔢 This will be attempt: $((${{ github.run_attempt }} + 1))/${{ inputs.max_attempts }}"
+          echo "🗂️ Cache ID: ${{ inputs.workflow_cache_id }}"
+          echo ""
+          
+          echo "🚀 Executing retry command..."
+          gh run rerun ${{ github.run_id }} --failed
+          
+          echo "✅ Retry command executed successfully!"
+          echo "🔗 Monitor progress at: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "${{ inputs.workflow_emoji }} ===== RETRY INITIATED ====="
+          echo "⏳ Please check the workflow run for retry progress"
+          echo "📋 Only failed jobs will be retried"
+          echo "✅ Successful jobs will remain untouched"
+          echo "🔄 This is attempt $((${{ github.run_attempt }} + 1))/${{ inputs.max_attempts }}"
