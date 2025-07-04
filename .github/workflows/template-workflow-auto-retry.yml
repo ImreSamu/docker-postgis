@@ -55,6 +55,9 @@ jobs:
     runs-on: ubuntu-24.04
     
     steps:
+      - name: Checkout repository for gh CLI
+        uses: actions/checkout@v4
+
       - name: "🔍 Debug retry conditions | ${{ inputs.workflow_name }}"
         env:
           RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -99,6 +102,11 @@ jobs:
         if: ${{ failure() && github.run_attempt < inputs.max_attempts }}
         run: |
           echo "🎯 ALL CONDITIONS MET: Should proceed with retry"
+
+      - name: "ℹ️ No retry needed | ${{ inputs.workflow_name }}"
+        if: ${{ success() }}
+        run: |
+          echo "ℹ️ All jobs completed successfully - no retry needed"
 
       - name: "${{ inputs.workflow_emoji }} Analyze failed builds | ${{ inputs.workflow_name }}"
         if: ${{ inputs.enable_detailed_logging }}

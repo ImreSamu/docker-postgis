@@ -1,0 +1,138 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Retry Test | Random Failure Test Workflow
+# Simple workflow to test auto-retry functionality with controlled random failures
+
+permissions:
+  actions: write
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - manifest
+    paths:
+      - '.github/workflows/workflow-build-retrytest.yml'
+      - '.github/workflows/template-workflow-auto-retry.yml'
+
+env:
+  WORKFLOW_CACHE_ID: "test"
+
+jobs:
+  # =============================================================================
+  # RANDOM FAILURE TEST JOBS (33% failure rate each)
+  # =============================================================================
+  # Each job generates a random number [1,2,3] and fails if result = 1
+  # This gives us ~33% failure rate per job, perfect for testing retry logic
+
+  random-job-alpha:
+    name: "🎲 Random Alpha"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate random number and potentially fail
+        run: |
+          # Generate random number between 1 and 3
+          RANDOM_NUM=$((RANDOM % 3 + 1))
+          echo "🎲 Generated random number: $RANDOM_NUM"
+          
+          if [ "$RANDOM_NUM" -eq 1 ]; then
+            echo "❌ Job Alpha failed (rolled 1)"
+            echo "This simulates a transient failure that retry should fix"
+            exit 1
+          else
+            echo "✅ Job Alpha succeeded (rolled $RANDOM_NUM)"
+            echo "This job completed successfully"
+          fi
+
+  random-job-beta:
+    name: "🎲 Random Beta" 
+    needs: random-job-alpha
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate random number and potentially fail
+        run: |
+          # Generate random number between 1 and 3
+          RANDOM_NUM=$((RANDOM % 3 + 1))
+          echo "🎲 Generated random number: $RANDOM_NUM"
+          
+          if [ "$RANDOM_NUM" -eq 1 ]; then
+            echo "❌ Job Beta failed (rolled 1)"
+            echo "This simulates a network timeout or registry issue"
+            exit 1
+          else
+            echo "✅ Job Beta succeeded (rolled $RANDOM_NUM)"
+            echo "This job completed successfully"
+          fi
+
+  random-job-gamma:
+    name: "🎲 Random Gamma"
+    needs: random-job-beta
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate random number and potentially fail
+        run: |
+          # Generate random number between 1 and 3  
+          RANDOM_NUM=$((RANDOM % 3 + 1))
+          echo "🎲 Generated random number: $RANDOM_NUM"
+          
+          if [ "$RANDOM_NUM" -eq 1 ]; then
+            echo "❌ Job Gamma failed (rolled 1)"
+            echo "This simulates a Docker build failure or test timeout"
+            exit 1
+          else
+            echo "✅ Job Gamma succeeded (rolled $RANDOM_NUM)"
+            echo "This job completed successfully"
+          fi
+
+  # =============================================================================
+  # AUTO-RETRY FAILED JOBS
+  # =============================================================================
+
+  auto-retry-failed:
+    name: "🔄 Auto-retry failed Random Test builds"
+    needs:
+      - random-job-alpha
+      - random-job-beta
+      - random-job-gamma
+    if: always()
+    uses: ./.github/workflows/template-workflow-auto-retry.yml
+    with:
+      workflow_name: "Random Test"
+      workflow_emoji: "🎲"
+      job_names: '["random-job-alpha", "random-job-beta", "random-job-gamma"]'
+      workflow_cache_id: "test"
+      max_attempts: 3
+      enable_detailed_logging: true
+
+# =============================================================================
+# RETRY TEST BENEFITS:
+# =============================================================================
+# 
+# 1. CONTROLLED RANDOMNESS:
+#    - Each job has ~33% failure rate (rolls 1 out of 1,2,3)
+#    - Multiple jobs increase chance of at least one failure
+#    - Realistic simulation of transient issues
+#
+# 2. DEPENDENCY CHAIN:
+#    - Alpha → Beta → Gamma (sequential execution)
+#    - Tests retry behavior with job dependencies
+#    - Validates that retry respects original workflow order
+#
+# 3. PERFECT FOR TESTING:
+#    - Fast execution (~30 seconds total)
+#    - No external dependencies (Docker, registries, etc.)
+#    - Predictable failure patterns for debugging
+#    - Easy to trigger manually via workflow_dispatch
+#
+# 4. RETRY VALIDATION:
+#    - Failed jobs should get retried automatically
+#    - Successful jobs should remain untouched
+#    - Demonstrates template-workflow-auto-retry.yml functionality
+#    - Shows detailed failure analysis and statistics
+#
+# 5. EXPECTED BEHAVIOR:
+#    - Run 1: Some jobs likely fail (33% chance each)
+#    - Auto-retry: Only failed jobs re-run
+#    - Run 2: Different random numbers, likely success
+#    - Result: Validates retry fixes "transient" issues
+# =============================================================================
