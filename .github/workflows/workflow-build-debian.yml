@@ -4,6 +4,7 @@ name: workflow-build-debian
 permissions:
   actions: write
   contents: read
+  packages: write  # Required for GHCR cache write access
 
 
   

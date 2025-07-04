@@ -222,9 +222,12 @@ The calling workflow must include these permissions:
 
 ```yaml
 permissions:
-  actions: write    # Required for gh run rerun command
-  contents: read    # Required for repository access
+  actions: write     # Required for gh run rerun command
+  contents: read     # Required for repository access
+  packages: write    # Required for GHCR cache write access
 ```
+
+**Note**: The `packages: write` permission is required for Docker build cache functionality, even though the auto-retry template doesn't directly use it. This permission must be present in the calling workflow to avoid cache-related build failures.
 
 ### GitHub CLI
 

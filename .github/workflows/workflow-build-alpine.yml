@@ -5,6 +5,7 @@ name: workflow-build-alpine
 permissions:
   actions: write
   contents: read
+  packages: write  # Required for GHCR cache write access
 
 on:
   workflow_dispatch:

@@ -57,6 +57,19 @@ The `template-workflow-multiarch.yml` serves as a reusable workflow template tha
 - `DOCKERHUB_USERNAME`: Docker Hub authentication username
 - `DOCKERHUB_ACCESS_TOKEN`: Docker Hub access token
 
+#### Required Permissions
+
+The template requires specific GitHub Actions permissions for proper operation:
+
+```yaml
+permissions:
+  actions: write     # Required for workflow re-run functionality
+  contents: read     # Required for repository access
+  packages: write    # Required for GHCR cache write access
+```
+
+**Critical**: The `packages: write` permission is essential for Docker build cache functionality. Without it, cache writes to GitHub Container Registry (GHCR) will fail, causing cache-related build errors.
+
 ### Usage Example
 
 ```yaml
