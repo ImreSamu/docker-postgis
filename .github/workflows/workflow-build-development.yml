@@ -143,6 +143,7 @@ jobs:
       - recent
       - master
       - locked
+    if: always()
     uses: ./.github/workflows/template-workflow-auto-retry.yml
     with:
       workflow_name: "Development"

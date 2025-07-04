@@ -54,7 +54,8 @@ jobs:
     # 1. Any job failed (failure())
     # 2. We haven't exceeded max attempts
     # 3. Event type is in allowed list
-    if: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
+    # Note: always() ensures this job runs even when dependencies fail
+    if: ${{ always() && failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
     
     runs-on: ubuntu-24.04
     

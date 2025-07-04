@@ -85,6 +85,7 @@ jobs:
     name: "🔄 Auto-retry failed Test builds"
     needs:
       - test-critical
+    if: always()
     uses: ./.github/workflows/template-workflow-auto-retry.yml
     with:
       workflow_name: "Test"

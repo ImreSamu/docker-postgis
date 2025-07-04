@@ -55,6 +55,7 @@ jobs:
       - alpine-2arch-3-21-3-5
       - alpine-2arch-3-21-3-4
       - alpine-2arch-3-21-3-3
+    if: always()
     uses: ./.github/workflows/template-workflow-auto-retry.yml
     with:
       workflow_name: "Alpine"
@@ -75,6 +76,7 @@ auto-retry-failed:
     - bookworm
     - bullseye
     - bundle0
+  if: always()
   uses: ./.github/workflows/template-workflow-auto-retry.yml
   with:
     workflow_name: "Debian"
@@ -94,6 +96,7 @@ auto-retry-failed:
   name: "🔄 Auto-retry failed Test builds"
   needs:
     - test-critical
+  if: always()
   uses: ./.github/workflows/template-workflow-auto-retry.yml
   with:
     workflow_name: "Test"
@@ -193,9 +196,10 @@ When `enable_detailed_logging: true`, the template provides:
 
 The retry job only runs when **ALL** of these conditions are met:
 
-1. **Any job failed**: `failure()` condition
-2. **Within attempt limit**: `github.run_attempt < max_attempts`
-3. **Allowed event type**: Event is in `retry_events` list
+1. **Always evaluate**: `always()` ensures evaluation even when dependencies fail
+2. **Any job failed**: `failure()` condition
+3. **Within attempt limit**: `github.run_attempt < max_attempts`
+4. **Allowed event type**: Event is in allowed list (`schedule,workflow_dispatch`)
 
 ### Retry Behavior
 

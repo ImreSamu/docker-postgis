@@ -158,6 +158,7 @@ jobs:
       - bookworm
       - bullseye
       - bundle0
+    if: always()
     uses: ./.github/workflows/template-workflow-auto-retry.yml
     with:
       workflow_name: "Debian"

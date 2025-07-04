@@ -286,6 +286,7 @@ jobs:
       - alpine-2arch-3-21-3-5
       - alpine-2arch-3-21-3-4
       - alpine-2arch-3-21-3-3
+    if: always()
     uses: ./.github/workflows/template-workflow-auto-retry.yml
     with:
       workflow_name: "Alpine"
