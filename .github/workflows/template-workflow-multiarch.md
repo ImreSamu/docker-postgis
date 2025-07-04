@@ -70,9 +70,34 @@ permissions:
 
 **Critical**: The `packages: write` permission is essential for Docker build cache functionality. Without it, cache writes to GitHub Container Registry (GHCR) will fail, causing cache-related build errors.
 
+#### Concurrency Control (Recommended)
+
+All calling workflows should include concurrency control to prevent resource conflicts:
+
+```yaml
+concurrency:
+  group: "workflow-specific-builds"  # Use unique group name per workflow
+  cancel-in-progress: false          # Queue builds instead of canceling
+```
+
+**Benefits:**
+- **Sequential execution**: Only one build runs at a time per workflow type
+- **Resource protection**: Prevents GitHub Actions resource exhaustion
+- **Build integrity**: Avoids cache conflicts between simultaneous builds
+- **Queue management**: Builds wait in queue rather than being canceled
+
 ### Usage Example
 
 ```yaml
+permissions:
+  actions: write
+  contents: read
+  packages: write
+
+concurrency:
+  group: "debian-builds"
+  cancel-in-progress: false
+
 jobs:
   build-bookworm:
     uses: ./.github/workflows/template-workflow-multiarch.yml
@@ -644,6 +669,68 @@ To add support for new architectures in the template:
 - **Parameter validation**: Ensure all required inputs are provided
 - **JSON formatting**: Verify array parameters use proper JSON format
 - **Secret access**: Ensure calling workflow has access to required secrets
+
+## Concurrency Management
+
+### Workflow-Level Concurrency Control
+
+All active build workflows now include concurrency control to ensure only one instance runs at a time:
+
+| Workflow | Concurrency Group | Behavior | Benefits |
+|----------|------------------|----------|----------|
+| **Alpine** | `alpine-builds` | Queue builds | Prevents QEMU resource conflicts |
+| **Debian** | `debian-builds` | Queue builds | Avoids cache write conflicts |
+| **Development** | `development-builds` | Queue builds | Ensures experimental stability |
+| **RetryTest** | `retrytest-builds` | Queue builds | Prevents test interference |
+
+### Concurrency Configuration
+
+```yaml
+concurrency:
+  group: "workflow-specific-builds"
+  cancel-in-progress: false  # false = queue, true = cancel previous
+```
+
+### Real-World Scenarios
+
+#### Scenario 1: Push + Manual Trigger
+```
+1. Developer pushes code → Alpine build starts
+2. Admin manually triggers Alpine build → Queued until #1 completes
+3. Build #1 finishes → Build #2 starts automatically
+```
+
+#### Scenario 2: Schedule + Push Conflict
+```
+1. 02:00 UTC: Scheduled build starts
+2. 02:15 UTC: Developer pushes → Build queued
+3. 03:30 UTC: Scheduled build finishes → Push build starts
+```
+
+#### Scenario 3: Multiple Manual Triggers
+```
+1. Admin triggers Alpine build #1 → Starts immediately
+2. Admin triggers Alpine build #2 → Queued (not canceled)
+3. Admin triggers Alpine build #3 → Queued behind #2
+4. Builds execute sequentially: #1 → #2 → #3
+```
+
+### Benefits
+
+**Resource Protection:**
+- Prevents GitHub Actions runner exhaustion
+- Avoids Docker registry rate limiting
+- Eliminates cache write conflicts
+
+**Build Integrity:**
+- Sequential execution ensures clean cache state
+- No race conditions between builds
+- Predictable resource allocation
+
+**Cost Efficiency:**
+- No wasted parallel builds that would conflict
+- Efficient use of GitHub Actions minutes
+- Reduced failed builds due to resource contention
 
 ## Integration with Build Workflows
 

@@ -12,6 +12,8 @@ The `auto-rerun-helper.yml` is a simple but powerful GitHub Actions workflow tha
 - 📊 **Multiple workflow support** - monitors several workflows simultaneously
 - 🚀 **Zero configuration** - works out-of-the-box without modification
 - ⚡ **Lightweight** - single job with minimal resource usage
+- 🔒 **Race condition protection** - concurrency control prevents multiple helpers for same workflow
+- 📋 **Clear logging** - detailed progress messages with emojis for better visibility
 
 ## How It Works
 
@@ -36,6 +38,31 @@ The retry job only executes when **ALL** conditions are met:
 1. **Workflow failed**: `github.event.workflow_run.conclusion == 'failure'`
 2. **Within attempt limit**: `github.event.workflow_run.run_attempt < 3`
 3. **Automatic trigger**: Triggered by `workflow_run` event (not manual)
+
+### Concurrency Control
+
+```yaml
+concurrency:
+  group: "${{ github.event.workflow_run.id }}-helper"
+  cancel-in-progress: true
+```
+
+**Benefits:**
+- **Race condition prevention**: Ensures only one helper runs per workflow
+- **Resource efficiency**: Cancels duplicate helper instances
+- **Clean execution**: Prevents conflicting retry attempts
+
+### Enhanced Logging
+
+The helper provides detailed progress information:
+
+```bash
+🔄 Queuing attempt 2 for workflow 'workflow-build-debian'
+📊 Failed run ID: 1234567890
+📅 Original run started: 2025-01-01T10:00:00Z
+🎯 Retrying only failed jobs...
+✅ Retry queued successfully!
+```
 
 ### Retry Command
 
