@@ -3,7 +3,13 @@ name: Auto-re-run Random Test (helper)
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["Retry Test | Random Failure Test Workflow"]
+    workflows:
+      - workflow-build-alpine
+      - workflow-build-debian
+      - workflow-build-development
+      - workflow-build-test
+      - workflow-build-retrytest
+
     types: [completed]
 
 permissions:

@@ -1,12 +1,10 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Retry Test | Random Failure Test Workflow
+name: workflow-build-retrytest
 # Simple workflow to test auto-retry functionality with controlled random failures
 
 permissions:
   actions: write
   contents: read
-
-
 
 on:
   workflow_dispatch:

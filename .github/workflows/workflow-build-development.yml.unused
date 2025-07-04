@@ -1,6 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Development | Docker Multi-Arch Build Workflow
-# Updated test configuration for improved compatibility
+name: workflow-build-development
 
 permissions:
   actions: write

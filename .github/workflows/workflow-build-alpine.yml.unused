@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Alpine | Docker Multi-Arch Build Workflow
+name: workflow-build-alpine
 # Updated test configuration for improved compatibility
 
 permissions:
