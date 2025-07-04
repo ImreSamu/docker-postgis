@@ -161,7 +161,8 @@ jobs:
           
           echo "${{ inputs.workflow_emoji }} ===== EXPECTED JOBS STATUS ====="
           echo "Expected jobs for ${{ inputs.workflow_name }} workflow:"
-          echo "${{ inputs.job_names }}" | jq -r '.[] | "📋 \(.)"'
+          echo "DEBUG: job_names value: ${{ inputs.job_names }}"
+          printf '%s\n' '${{ inputs.job_names }}' | jq -r '.[] | "📋 \(.)"'
           echo ""
           
           echo "${{ inputs.workflow_emoji }} ===== FAILURE SUMMARY ====="
