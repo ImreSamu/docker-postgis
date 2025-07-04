@@ -50,9 +50,7 @@ jobs:
     # Dynamic needs based on input job names
     # Note: GitHub Actions doesn't support dynamic needs, so this will be handled by the calling workflow
     
-    # Run for all event types: schedule, workflow_dispatch, push, pull_request
-    # Original condition limited to: contains('schedule,workflow_dispatch', github.event_name)
-    if: ${{ always() && failure() && github.run_attempt < inputs.max_attempts }}
+    # No job-level condition - let it always run, check conditions in steps
     
     runs-on: ubuntu-24.04
     
