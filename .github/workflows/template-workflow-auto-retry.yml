@@ -173,11 +173,29 @@ jobs:
           echo "📈 Success rate: $(echo "scale=1; ($TOTAL_COUNT - $FAILED_COUNT) * 100 / $TOTAL_COUNT" | bc -l)%"
           echo ""
       
+      - name: "🔍 Debug needs context | ${{ inputs.workflow_name }}"
+        run: |
+          echo "DEBUG: Checking needs context..."
+          echo "needs context: ${{ toJson(needs) }}"
+          echo "needs.*.result: ${{ toJson(needs.*.result) }}"
+          echo "Check if any job failed using gh CLI instead..."
+          
       - name: "${{ inputs.workflow_emoji }} Retry failed builds | ${{ inputs.workflow_name }}"
-        if: ${{ (failure() || contains(needs.*.result, 'failure')) && github.run_attempt < inputs.max_attempts }}
+        if: ${{ github.run_attempt < inputs.max_attempts }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "🔍 Checking for failed jobs using gh CLI..."
+          FAILED_COUNT=$(gh run view ${{ github.run_id }} --json jobs --jq '[.jobs[] | select(.conclusion == "failure")] | length')
+          echo "Failed jobs count: $FAILED_COUNT"
+          
+          if [ "$FAILED_COUNT" -eq 0 ]; then
+            echo "ℹ️ No failed jobs found - skipping retry"
+            exit 0
+          fi
+          
+          echo "✅ Found $FAILED_COUNT failed jobs - proceeding with retry"
+          echo ""
           echo "${{ inputs.workflow_emoji }} ===== STARTING RETRY PROCESS ====="
           echo "🔄 Retrying failed jobs for ${{ inputs.workflow_name }} workflow..."
           echo "📊 Run ID: ${{ github.run_id }}"
