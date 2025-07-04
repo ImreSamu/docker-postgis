@@ -132,15 +132,15 @@ jobs:
           echo ""
           
           echo "${{ inputs.workflow_emoji }} ===== JOB STATUS BREAKDOWN ====="
-          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | "📋 Job: \(.name)\n   Status: \(.status)\n   Conclusion: \(.conclusion // \"running\")\n   Started: \(.startedAt // \"not started\")\n   Completed: \(.completedAt // \"running\")\n   URL: \(.url)\n"'
+          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | "📋 Job: \(.name)\n   Status: \(.status)\n   Conclusion: \(.conclusion // "running")\n   Started: \(.startedAt // "not started")\n   Completed: \(.completedAt // "running")\n   URL: \(.url)\n"'
           echo ""
           
           echo "${{ inputs.workflow_emoji }} ===== FAILED JOBS DETAILED ====="
-          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.conclusion == "failure") | "❌ FAILED: \(.name)\n   Started: \(.startedAt)\n   Completed: \(.completedAt)\n   Runner: \(.runnerName // \"unknown\")\n   URL: \(.url)\n"'
+          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.conclusion == "failure") | "❌ FAILED: \(.name)\n   Started: \(.startedAt)\n   Completed: \(.completedAt)\n   Runner: \(.runnerName // "unknown")\n   URL: \(.url)\n"'
           echo ""
           
           echo "${{ inputs.workflow_emoji }} ===== MATRIX FAILURE ANALYSIS ====="
-          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.conclusion == "failure") | "❌ \(.name)\n   Failed Steps: \(.steps[]? | select(.conclusion == \"failure\") | \"      • \(.name): \(.conclusion)\")\n"'
+          gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.conclusion == "failure") | "❌ \(.name)\n   Failed Steps: \(.steps[]? | select(.conclusion == "failure") | "      • \(.name): \(.conclusion)")\n"'
           echo ""
           
           echo "${{ inputs.workflow_emoji }} ===== ARCHITECTURE FAILURE STATS ====="
@@ -185,7 +185,21 @@ jobs:
           echo ""
           
           echo "🚀 Executing retry command..."
-          gh run rerun ${{ github.run_id }} --failed
+          echo "⏳ Waiting for workflow to complete before retry..."
+          sleep 5
+          
+          # Check if workflow is still running
+          STATUS=$(gh run view ${{ github.run_id }} --json status --jq '.status')
+          if [ "$STATUS" = "in_progress" ]; then
+            echo "⚠️ Workflow still running - waiting..."
+            sleep 10
+          fi
+          
+          gh run rerun ${{ github.run_id }} --failed || {
+            echo "❌ Retry failed - workflow might still be running"
+            echo "🔄 Please manually retry after workflow completes"
+            exit 0
+          }
           
           echo "✅ Retry command executed successfully!"
           echo "🔗 Monitor progress at: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
