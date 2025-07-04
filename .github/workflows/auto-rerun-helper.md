@@ -306,6 +306,190 @@ The helper can be integrated with external monitoring:
 - **Metrics collection**: Export retry statistics to monitoring platforms
 - **Alerting**: Trigger alerts for high retry rates or persistent failures
 
+## Critical Setup Requirements
+
+### ⚠️ Default Branch Requirement
+
+**CRITICAL**: The auto-rerun-helper.yml **MUST** be on the **default branch** to work properly.
+
+GitHub Actions `workflow_run` trigger limitation:
+> "This event will only trigger a workflow run if the workflow file is on the default branch"
+
+#### Branch Setup Checklist
+
+1. **Check default branch:**
+   ```bash
+   gh repo view OWNER/REPO --json defaultBranchRef
+   ```
+
+2. **If working on different branch (e.g., `manifest`):**
+   ```bash
+   # Copy auto-rerun-helper.yml to default branch manually
+   # OR merge development branch to default branch
+   ```
+
+3. **Verify helper is on default branch:**
+   ```bash
+   gh api repos/OWNER/REPO/contents/.github/workflows/auto-rerun-helper.yml?ref=master
+   ```
+
+**Example Issue:**
+- Default branch: `master`
+- Development branch: `manifest` 
+- Helper only on `manifest` → **Helper will NEVER activate** ❌
+- Helper copied to `master` → **Helper works correctly** ✅
+
+## Troubleshooting & Debugging
+
+### Debug Steps Checklist
+
+#### 1. Check Helper Activation
+```bash
+# Check if helper ran recently
+gh run list --repo OWNER/REPO --workflow="auto-rerun-helper.yml" --limit 5
+
+# Expected: Recent runs with event "workflow_run"
+```
+
+#### 2. Check Failed Workflow Details
+```bash
+# Get failed workflow details
+gh run view WORKFLOW_ID --repo OWNER/REPO --json attempt,conclusion,status,updatedAt,workflowName
+
+# Expected: attempt=1, conclusion="failure", status="completed"
+```
+
+#### 3. Check Default Branch Setup
+```bash
+# Verify default branch
+gh repo view OWNER/REPO --json defaultBranchRef
+
+# Verify helper exists on default branch  
+gh api repos/OWNER/REPO/contents/.github/workflows/auto-rerun-helper.yml?ref=BRANCH
+```
+
+#### 4. Check Workflow Monitoring List
+```bash
+# Check if workflow is in monitored list
+cat .github/workflows/auto-rerun-helper.yml | grep -A 10 "workflows:"
+
+# Expected: Your failed workflow name should be listed
+```
+
+#### 5. Check Helper Logs
+```bash
+# Get helper job logs
+gh run view HELPER_RUN_ID --log --repo OWNER/REPO
+
+# Look for retry command execution and success message
+```
+
+#### 6. Monitor Real-Time Activity
+```bash
+# Watch for new auto-rerun-helper activations (run every 30 seconds)
+watch -n 30 'gh run list --repo OWNER/REPO --workflow="auto-rerun-helper.yml" --limit 3'
+```
+
+### Common Issues & Solutions
+
+| Issue | Symptom | Solution |
+|-------|---------|----------|
+| **Helper never activates** | No auto-rerun-helper runs after failures | Check if helper is on default branch |
+| **Wrong field reference** | Helper runs but skips retry | Use `github.event.workflow_run.attempt` not `run_attempt` |
+| **Workflow not monitored** | Helper ignores specific workflows | Add workflow name to `workflows:` list |
+| **Permission denied** | Helper fails during retry | Ensure `actions: write` permission |
+| **Attempt limit reached** | No retry after 3rd attempt | Expected behavior (max 3 attempts total) |
+
+### How to Detect Job Retry Status
+
+**Question**: How to determine if a job was retried (only failed parts)?
+
+**Solution**: Use these CLI commands to detect retry activity:
+
+#### Method 1: Check Workflow Attempt Number
+```bash
+# Check if workflow has multiple attempts
+gh run view WORKFLOW_ID --repo OWNER/REPO --json attempt
+# If attempt > 1, it was retried
+```
+
+#### Method 2: Analyze Job Details
+```bash
+# Get detailed job information
+gh run view WORKFLOW_ID --repo OWNER/REPO --json jobs
+
+# This returns all jobs with timing, status, and names
+# Retry jobs will have distinctive naming patterns
+```
+
+#### Method 3: Detect Retry Jobs by Name Pattern
+```bash
+# Find jobs with "attempt" in their name (template-based retries)
+gh run view WORKFLOW_ID --repo OWNER/REPO --json jobs | jq '.jobs[] | select(.name | contains("attempt")) | .name'
+
+# One-liner retry detection
+gh run view WORKFLOW_ID --repo OWNER/REPO --json jobs | jq -r 'if any(.jobs[]; .name | contains("attempt")) then "✅ RETRY DETECTED" else "❌ NO RETRY: Original run only" end'
+```
+
+#### Method 4: Extract Attempt Numbers
+```bash
+# Extract exact attempt number from job names
+gh run view WORKFLOW_ID --repo OWNER/REPO --json jobs | jq -r '.jobs[] | select(.name | contains("attempt")) | "Found retry job: " + .name + " → Attempt #" + (.name | capture("attempt (?<num>[0-9]+)").num)'
+```
+
+#### Method 5: Check Job Timing Patterns
+```bash
+# Look for time gaps and patterns in job execution
+gh run view WORKFLOW_ID --repo OWNER/REPO --json jobs | jq '.jobs[] | {name: .name, started: .startedAt, completed: .completedAt, conclusion: .conclusion}'
+
+# Retried jobs will have newer startedAt times than original jobs
+```
+
+#### Method 6: Monitor Auto-Rerun-Helper Logs
+```bash
+# Helper logs show which workflow ID was retried
+gh run view HELPER_RUN_ID --repo OWNER/REPO --log | grep "Failed run ID"
+
+# Example output: "📊 Failed run ID: 16069086794"
+```
+
+#### Method 7: Boolean Retry Check
+```bash
+# Simple true/false check for retry existence
+gh run view WORKFLOW_ID --repo OWNER/REPO --json jobs | jq -r 'any(.jobs[]; .name | contains("attempt"))'
+```
+
+### Real Example Output
+
+**Original Failed Workflow** (attempt 1):
+```bash
+$ gh run view 16068879174 --repo ImreSamu/docker-postgis --json attempt
+{"attempt":1,"conclusion":"failure","workflowName":"workflow-build-retrytest"}
+```
+
+**Retried Successful Workflow** (attempt 2):
+```bash
+$ gh run view 16069086794 --repo ImreSamu/docker-postgis --json attempt  
+{"attempt":2,"conclusion":"success","workflowName":"workflow-build-retrytest"}
+
+$ gh run view 16069086794 --repo ImreSamu/docker-postgis --json jobs | jq -r 'if any(.jobs[]; .name | contains("attempt")) then "✅ RETRY DETECTED" else "❌ NO RETRY" end'
+✅ RETRY DETECTED
+```
+
+### Understanding Retry Behavior
+
+**Template-based retries** (like `template-workflow-auto-retry.yml`):
+- Add `(attempt X)` to job names
+- Easy to detect with name pattern matching
+- Show detailed retry context in job names
+
+**Auto-rerun-helper retries** (using `gh run rerun --failed`):
+- Increment workflow `attempt` number
+- Only failed jobs get new `startedAt` timestamps
+- Successful jobs keep original execution times
+
+**Feature Request**: GitHub should add explicit retry metadata to job/run objects for better visibility.
+
 ## Future Enhancements
 
 ### Potential Improvements
@@ -314,6 +498,7 @@ The helper can be integrated with external monitoring:
 2. **Workflow-specific limits**: Different retry limits per workflow
 3. **Failure pattern analysis**: Basic failure categorization
 4. **Integration hooks**: Support for external notification systems
+5. **Retry detection**: Better visibility into which jobs were actually retried
 
 ### Architectural Considerations
 
