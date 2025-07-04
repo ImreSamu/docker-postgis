@@ -50,9 +50,9 @@ jobs:
     # Dynamic needs based on input job names
     # Note: GitHub Actions doesn't support dynamic needs, so this will be handled by the calling workflow
     
-    # Debug version: Always run to see why retry is skipped
-    # Original condition: always() && failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name)
-    if: ${{ always() }}
+    # Run for all event types: schedule, workflow_dispatch, push, pull_request
+    # Original condition limited to: contains('schedule,workflow_dispatch', github.event_name)
+    if: ${{ always() && failure() && github.run_attempt < inputs.max_attempts }}
     
     runs-on: ubuntu-24.04
     
@@ -62,14 +62,13 @@ jobs:
           RUN_ATTEMPT: ${{ github.run_attempt }}
           MAX_ATTEMPTS: ${{ inputs.max_attempts }}
           EVENT_NAME: ${{ github.event_name }}
-          EVENT_MATCH: ${{ contains('schedule,workflow_dispatch', github.event_name) }}
         run: |
           echo "=== RETRY CONDITIONS DEBUG ==="
           echo "always(): true (this step is running)"
           echo "github.run_attempt: $RUN_ATTEMPT"
           echo "inputs.max_attempts: $MAX_ATTEMPTS"
           echo "github.event_name: $EVENT_NAME"
-          echo "contains('schedule,workflow_dispatch', github.event_name): $EVENT_MATCH"
+          echo "all_events_allowed: true (event filter removed)"
           echo "attempt_check (run_attempt < max_attempts): $([ "$RUN_ATTEMPT" -lt "$MAX_ATTEMPTS" ] && echo "true" || echo "false")"
           echo ""
           echo "=== JOB STATES (inferred from workflow run) ==="
@@ -90,9 +89,8 @@ jobs:
           echo "This step only runs if success() returns true"
 
       - name: "🔍 Test event condition | ${{ inputs.workflow_name }}"
-        if: ${{ contains('schedule,workflow_dispatch', github.event_name) }}
         run: |
-          echo "✅ EVENT MATCH: Event '${{ github.event_name }}' matches allowed events"
+          echo "✅ EVENT ACCEPTED: Event '${{ github.event_name }}' (all events now allowed)"
 
       - name: "🔍 Test attempt condition | ${{ inputs.workflow_name }}"
         if: ${{ github.run_attempt < inputs.max_attempts }}
@@ -100,7 +98,7 @@ jobs:
           echo "✅ ATTEMPT OK: Run attempt ${{ github.run_attempt }} < max ${{ inputs.max_attempts }}"
 
       - name: "🔍 Test FULL condition | ${{ inputs.workflow_name }}"
-        if: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
+        if: ${{ failure() && github.run_attempt < inputs.max_attempts }}
         run: |
           echo "🎯 ALL CONDITIONS MET: Should proceed with retry"
 
@@ -124,7 +122,7 @@ jobs:
           echo ""
           
           echo "${{ inputs.workflow_emoji }} ===== WORKFLOW RUN DETAILS ====="
-          gh run view ${{ github.run_id }} --json status,conclusion,createdAt,updatedAt,runNumber,runStartedAt,headBranch,headSha,event,workflowName,displayTitle
+          gh run view ${{ github.run_id }} --json status,conclusion,createdAt,updatedAt,number,startedAt,headBranch,headSha,event,workflowName,displayTitle
           echo ""
           
           echo "${{ inputs.workflow_emoji }} ===== JOB STATUS BREAKDOWN ====="
@@ -169,7 +167,7 @@ jobs:
           echo ""
       
       - name: "${{ inputs.workflow_emoji }} Retry failed builds | ${{ inputs.workflow_name }}"
-        if: ${{ failure() && github.run_attempt < inputs.max_attempts && contains('schedule,workflow_dispatch', github.event_name) }}
+        if: ${{ failure() && github.run_attempt < inputs.max_attempts }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

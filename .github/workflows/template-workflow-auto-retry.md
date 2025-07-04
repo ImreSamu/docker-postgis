@@ -199,7 +199,7 @@ The retry job only runs when **ALL** of these conditions are met:
 1. **Always evaluate**: `always()` ensures evaluation even when dependencies fail
 2. **Any job failed**: `failure()` condition
 3. **Within attempt limit**: `github.run_attempt < max_attempts`
-4. **Allowed event type**: Event is in allowed list (`schedule,workflow_dispatch`)
+4. **All events**: Works for any trigger type (`schedule`, `workflow_dispatch`, `push`, `pull_request`)
 
 ### Retry Behavior
 
@@ -259,11 +259,13 @@ permissions:
 
 ### 1. Retry Event Logic
 
-Retry is **hardcoded** to trigger only on:
+Retry is **enabled for all event types**:
 - `schedule` events (automated builds)
-- `workflow_dispatch` events (manual triggers)
+- `workflow_dispatch` events (manual triggers)  
+- `push` events (code pushes)
+- `pull_request` events (PR builds)
 
-This prevents unnecessary retries on PR pushes while ensuring production reliability.
+This ensures consistent retry behavior regardless of how the workflow was triggered.
 
 ### 2. Attempt Limits
 
