@@ -24,7 +24,7 @@ jobs:
   rerun-failed:
     if: >
       github.event.workflow_run.conclusion == 'failure' &&
-      github.event.workflow_run.run_attempt < 3
+      github.event.workflow_run.attempt < 3
     runs-on: ubuntu-24.04
 
     steps:
@@ -32,7 +32,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🔄 Queuing attempt $((${{ github.event.workflow_run.run_attempt }} + 1)) for workflow '${{ github.event.workflow_run.name }}'"
+          echo "🔄 Queuing attempt $((${{ github.event.workflow_run.attempt }} + 1)) for workflow '${{ github.event.workflow_run.name }}'"
           echo "📊 Failed run ID: ${{ github.event.workflow_run.id }}"
           echo "📅 Original run started: ${{ github.event.workflow_run.created_at }}"
           echo "🎯 Retrying only failed jobs..."
