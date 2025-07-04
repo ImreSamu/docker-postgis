@@ -18,6 +18,7 @@ on:
     paths:
       - '.github/workflows/workflow-build-debian.yml'
       - '.github/workflows/template-workflow-multiarch.yml'
+      - '.github/workflows/template-workflow-auto-retry.yml'
       - 'test/**'
 #multi-arch-paths-start
       # Bookworm paths
@@ -41,6 +42,7 @@ on:
     paths:
       - '.github/workflows/workflow-build-debian.yml'
       - '.github/workflows/template-workflow-multiarch.yml'
+      - '.github/workflows/template-workflow-auto-retry.yml'
       - 'test/**'
 #multi-arch-paths-start
       # Bookworm paths
