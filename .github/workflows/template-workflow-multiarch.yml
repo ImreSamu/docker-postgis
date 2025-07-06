@@ -786,7 +786,5 @@ jobs:
         done
 
 
-# TODO: - add a step to clean up old images in GHCR
-#   ghcr-cleaner ${cache_registry}/${cache_repo_owner}/${cache_image_name}-amd64 \
-#              --keep-tag-regex '2025-W(2[6-9]|3[0-9])'   # keep last 4 weeks
-#
+# Cache cleanup is handled by cache-cleanup-weekly.yml (runs every Sunday)
+# ⚠️  IMPORTANT: If you modify cache naming here, update cache-cleanup-weekly.yml too!

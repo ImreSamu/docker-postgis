@@ -306,6 +306,65 @@ The helper can be integrated with external monitoring:
 - **Metrics collection**: Export retry statistics to monitoring platforms
 - **Alerting**: Trigger alerts for high retry rates or persistent failures
 
+## GitHub Actions Concurrency Behavior
+
+### ⚠️ Understanding "Queued" Status
+
+**Important**: A workflow showing `status: "queued"` can still have jobs actively running!
+
+#### GitHub Actions Concurrency Limitations
+
+**Concurrency Group Rules:**
+- **Maximum 1 running workflow** per concurrency group
+- **Maximum 1 pending workflow** per concurrency group  
+- **Additional triggers** are automatically **cancelled**
+
+**Example Workflow Status:**
+```bash
+# Real workflow behavior observed:
+workflow-build-alpine: status="queued"          # Workflow-level status
+├── Job: amd64 build    → actively building     # Job-level execution  
+├── Job: arm64 build    → actively building     # Job-level execution
+└── Job: s390x build    → actively building     # Job-level execution
+```
+
+#### Why This Happens
+
+GitHub Actions concurrency control works at the **workflow level**, but **individual jobs can begin execution** even when the workflow status remains "queued" waiting for a concurrency slot.
+
+**This is normal GitHub Actions behavior** - not a bug!
+
+#### Concurrency Groups in Our Setup
+
+```yaml
+# Different concurrency groups can run simultaneously:
+debian-builds:     [RUNNING]     # workflow-build-debian
+alpine-builds:     [QUEUED]      # workflow-build-alpine (but jobs running!)
+development-builds: [RUNNING]    # workflow-build-development  
+retrytest-builds:  [AVAILABLE]   # workflow-build-retrytest
+```
+
+#### Monitoring Implications
+
+When monitoring workflow status:
+
+1. **Don't rely only on workflow status** for resource monitoring
+2. **Check individual job execution** for accurate build activity
+3. **Understand that `queued` ≠ idle** - jobs may be actively building
+4. **Use job logs and timing** to detect actual build activity
+
+**Commands for accurate monitoring:**
+```bash
+# Check workflow status (may show "queued")
+gh run list --repo OWNER/REPO --limit 10
+
+# Check actual job execution (shows real activity)
+gh run view WORKFLOW_ID --repo OWNER/REPO --json jobs
+
+# Monitor active job execution
+gh run view WORKFLOW_ID --repo OWNER/REPO | grep -E "(in_progress|running)"
+```
+
 ## Critical Setup Requirements
 
 ### ⚠️ Default Branch Requirement
@@ -399,6 +458,8 @@ watch -n 30 'gh run list --repo OWNER/REPO --workflow="auto-rerun-helper.yml" --
 | **Workflow not monitored** | Helper ignores specific workflows | Add workflow name to `workflows:` list |
 | **Permission denied** | Helper fails during retry | Ensure `actions: write` permission |
 | **Attempt limit reached** | No retry after 3rd attempt | Expected behavior (max 3 attempts total) |
+| **"Queued" confusion** | Jobs running but status shows "queued" | **Normal behavior** - check job logs, not workflow status |
+| **Concurrency misunderstanding** | Multiple workflows seem to run simultaneously | Different concurrency groups can run in parallel |
 
 ### How to Detect Job Retry Status
 

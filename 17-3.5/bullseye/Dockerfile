@@ -28,6 +28,12 @@ ARG PGIS1_SOURCE_REPO
 ARG PGIS1_MAINTAINER
 ARG PGIS1_BASE_IMAGE
 
+# Multi-architecture build arguments (re-declared after FROM)
+ARG PGIS1_REGRESSION_MODE
+ARG PGIS1_OPTIMIZATION_FLAGS  
+ARG PGIS1_LTO_FLAGS
+ARG PGIS1_POSTGIS_REPOSITORY
+
 LABEL maintainer="${PGIS1_MAINTAINER}" \
       org.opencontainers.image.description="PostGIS ${PGIS1_POSTGIS_VERSION} spatial database extension with PostgreSQL ${PGIS1_POSTGRES_MAJOR} bullseye" \
       org.opencontainers.image.source="${PGIS1_SOURCE_REPO}" \
