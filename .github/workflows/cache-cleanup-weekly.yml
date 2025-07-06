@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: 🧹 Weekly Cache Cleanup
+
+# Weekly cache cleanup for docker build cache created by template-workflow-multiarch.yml
+# Keeps only the last 4 ISO weeks of cache images per architecture
+# 
+# ⚠️  IMPORTANT: This workflow cleans up cache created by template-workflow-multiarch.yml
+# ⚠️  If you modify cache naming in template-workflow-multiarch.yml, update this workflow too!
+#
+# Cache format: postgistest-cache-{arch}:{workflow_id}-{family}-pg{version}-{ISO_week}
+# Example: postgistest-cache-amd64:alp-alpine-pg17-2025-W27
+
+on:
+  schedule:
+    - cron: '0 18 * * 0'  # Every Sunday at 18:00 UTC
+  workflow_dispatch:        # Allow manual trigger for testing
+
+jobs:
+  cleanup:
+    name: "🧹 Clean ${{ matrix.arch }} cache"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false      # Continue cleanup even if one architecture fails
+      matrix:
+        # All architectures that have cache repositories
+        arch: [amd64, arm64, armv6, armv7, "386", mips64le, ppc64le, riscv64, s390x]
+    
+    steps:
+    - name: Calculate last 4 ISO weeks to keep
+      id: weeks
+      run: |
+        # Calculate current and previous 3 ISO weeks
+        W1=$(date -u +%G-W%V)                    # Current week
+        W2=$(date -u -d "7 days ago" +%G-W%V)    # 1 week ago
+        W3=$(date -u -d "14 days ago" +%G-W%V)   # 2 weeks ago
+        W4=$(date -u -d "21 days ago" +%G-W%V)   # 3 weeks ago
+        
+        # Create regex pattern to match any of the 4 weeks at the end of tag
+        # Matches tags like: alp-alpine-pg17-2025-W27
+        KEEP_PATTERN=".*-($W1|$W2|$W3|$W4)$"
+        
+        echo "keep_pattern=$KEEP_PATTERN" >> "$GITHUB_OUTPUT"
+        
+        echo "=== Cache Retention Policy ==="
+        echo "Keep last 4 ISO weeks: $W1, $W2, $W3, $W4"
+        echo "Regex pattern: $KEEP_PATTERN"
+        echo "Target: postgistest-cache-${{ matrix.arch }}"
+        echo "Note: Cache created by template-workflow-multiarch.yml"
+        echo "============================="
+
+    - name: Delete old cache versions
+      uses: actions/delete-package-versions@v5
+      continue-on-error: true  # Don't fail workflow if package doesn't exist
+      with:
+        package-name: postgistest-cache-${{ matrix.arch }}
+        package-type: container
+        # Keep minimum 4 versions even if they don't match the week pattern
+        # This prevents accidental deletion of all cache if week calculation fails
+        min-versions-to-keep: 4
+        # Ignore (keep) versions matching the last 4 ISO weeks pattern
+        ignore-versions: '${{ steps.weeks.outputs.keep_pattern }}'
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: List remaining cache versions
+      run: |
+        echo "=== Remaining cache versions after cleanup ==="
+        gh api repos/${{ github.repository }}/packages/container/postgistest-cache-${{ matrix.arch }}/versions \
+          --jq '.[] | .metadata.container.tags[0] // "untagged"' 2>/dev/null || echo "No cache found for ${{ matrix.arch }}"
+        echo "=============================================="
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Cleanup summary
+      run: |
+        echo "✅ Cache cleanup completed for ${{ matrix.arch }}"
+        echo "📦 Package: postgistest-cache-${{ matrix.arch }}"
+        echo "🗓️  Kept weeks: $(echo '${{ steps.weeks.outputs.keep_pattern }}' | grep -o '[0-9]\{4\}-W[0-9]\+' | tr '\n' ' ')"
+        echo "🔄 Next cleanup: $(date -u -d 'next Sunday 18:00' '+%Y-%m-%d %H:%M UTC')"
+        echo "⚠️  Note: This cleans cache created by template-workflow-multiarch.yml"
