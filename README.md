@@ -30,7 +30,7 @@ This image ensures that the default database created by the parent `postgres` im
 Unless `-e POSTGRES_DB` is passed to the container at startup time, this database will be named after the admin user (either `postgres` or the user specified with `-e POSTGRES_USER`). If you would prefer to use the older template database mechanism for enabling PostGIS, the image also provides a PostGIS-enabled template database called `template_postgis`.
 
 
-## Versions (2025-07-06)
+## Versions (2025-07-07)
 
 
 We provide multi-platform image support for the following architectures:
@@ -194,7 +194,7 @@ Please note that the included package list is subject to change as we continue t
   **⚠️ Important notes:**
   - Pre-release and master images may have breaking changes or bugs
   - The `*-master` template is updated manually and may lag behind actual development by a few weeks
-  - Master builds use SFCGAL 1.5+ and CGAL locked to the [5.6.x-branch](https://github.com/CGAL/cgal/tree/5.6.x-branch)
+  - Master builds use SFCGAL 1.5+ and CGAL locked to the [6.0.x-branch](https://github.com/CGAL/cgal/tree/6.0.x-branch)
   - Use these images for testing only, not in production environments
 
 <!-- test_begin  -->

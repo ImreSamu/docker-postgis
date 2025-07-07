@@ -38,7 +38,7 @@ GEOS_BRANCH="main"
 GDAL_BRANCH="master"
 PROJ_BRANCH="master"
 SFCGAL_BRANCH="master"
-CGAL_BRANCH="master"
+CGAL_BRANCH="6.0.x-branch"
 
 # locked:  extra locking versions for dependencies
 CGAL_CHECKOUT_LOCK=""
@@ -174,7 +174,7 @@ packagesBase='http://apt.postgresql.org/pub/repos/apt/dists/'
 
 # Check if we need to fetch git branch HEADs (check cache first)
 need_git_calls=false
-for git_check in "git_branch_cgal_5.6.x" "git_branch_sfcgal_master" "git_branch_proj_master" "git_branch_gdal_master" "git_branch_geos_main" "git_branch_postgis_master"; do
+for git_check in "git_branch_cgal_6.0.x" "git_branch_sfcgal_master" "git_branch_proj_master" "git_branch_gdal_master" "git_branch_geos_main" "git_branch_postgis_master"; do
     if ! cache_get "$git_check" 2 >/dev/null; then
         need_git_calls=true
         break
@@ -189,9 +189,9 @@ if [ "$need_git_calls" = true ]; then
 fi
 
 # Cache git branch HEAD hashes (2 hour TTL)
-if ! cgal5XGitHash=$(cache_get "git_branch_cgal_5.6.x" 2); then
-    cgal5XGitHash="$(git ls-remote https://github.com/CGAL/cgal.git heads/5.6.x-branch | awk '{ print $1}')"
-    cache_store "git_branch_cgal_5.6.x" "$cgal5XGitHash"
+if ! cgal6XGitHash=$(cache_get "git_branch_cgal_6.0.x" 2); then
+    cgal6XGitHash="$(git ls-remote https://github.com/CGAL/cgal.git heads/6.0.x-branch | awk '{ print $1}')"
+    cache_store "git_branch_cgal_6.0.x" "$cgal6XGitHash"
 fi
 
 if ! sfcgalGitHash=$(cache_get "git_branch_sfcgal_master" 2); then
@@ -752,8 +752,8 @@ for version in "${versions[@]}"; do
                         else
                             printf "    POSTGIS_CHECKOUT: '%s'\n" "$postgisGitHash"
                             printf "    POSTGIS_CHECKOUT_SHA1: '%s'\n" "$postgisGitHash"
-                            printf "    CGAL_CHECKOUT: '%s'\n" "$cgal5XGitHash"
-                            printf "    CGAL_CHECKOUT_SHA1: '%s'\n" "$cgal5XGitHash"
+                            printf "    CGAL_CHECKOUT: '%s'\n" "$cgal6XGitHash"
+                            printf "    CGAL_CHECKOUT_SHA1: '%s'\n" "$cgal6XGitHash"
                             printf "    SFCGAL_CHECKOUT: '%s'\n" "$sfcgalGitHash"
                             printf "    SFCGAL_CHECKOUT_SHA1: '%s'\n" "$sfcgalGitHash"
                             printf "    PROJ_CHECKOUT: '%s'\n" "$projGitHash"
