@@ -37,6 +37,7 @@ declare -A debianSuite=(
     [16]='bullseye-slim'
     [17]='bullseye-slim'
     [18]='trixie-slim'
+    [19]='trixie-slim'
 )
 
 defaultPostgisDebPkgNameVersionSuffix='3'
@@ -48,6 +49,7 @@ declare -A postgisDebPkgNameVersionSuffixes=(
     [3.4]='3'
     [3.5]='3'
     [3.6]='3'
+    [3.7]='3'
 )
 
 packagesBase='http://apt.postgresql.org/pub/repos/apt/dists/'

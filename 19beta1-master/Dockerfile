@@ -8,12 +8,12 @@
 ARG DOCKER_CMAKE_BUILD_TYPE=Release
 ARG CGAL_GIT_BRANCH=6.1.x-branch
 ARG NPROC=
-FROM docker.io/postgres:16-trixie AS builder
+FROM docker.io/postgres:19beta1-trixie AS builder
 
 ARG NPROC
 
 LABEL maintainer="PostGIS Project - https://postgis.net" \
-      org.opencontainers.image.description="PostGIS - master  spatial database extension with PostgreSQL 16 trixie" \
+      org.opencontainers.image.description="PostGIS - master  spatial database extension with PostgreSQL 19beta1 trixie" \
       org.opencontainers.image.source="https://github.com/postgis/docker-postgis"
 
 WORKDIR /
@@ -275,7 +275,7 @@ RUN set -ex \
 # -------------------------------------------
 # STAGE  final
 # -------------------------------------------
-FROM docker.io/postgres:16-trixie
+FROM docker.io/postgres:19beta1-trixie
 
 ARG NPROC
 ARG DOCKER_CMAKE_BUILD_TYPE
