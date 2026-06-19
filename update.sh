@@ -25,7 +25,7 @@ githubrepolink="https://github.com/postgis/docker-postgis/blob/master"
 # sort version numbers with highest last (so it goes first in .travis.yml)
 IFS=$'\n'; versions=( $(echo "${versions[*]}" | sort -V) ); unset IFS
 
-defaultAlpinenSuite='3.23'
+defaultAlpinenSuite='3.24'
 defaultDebianSuite='bullseye-slim'
 declare -A debianSuite=(
     # https://github.com/docker-library/postgres/issues/582
@@ -54,7 +54,7 @@ declare -A postgisDebPkgNameVersionSuffixes=(
 
 packagesBase='http://apt.postgresql.org/pub/repos/apt/dists/'
 
-cgalGitBranch='6.1.x-branch'
+cgalGitBranch='6.2.x-branch'
 cgalGitHash="$(git ls-remote https://github.com/CGAL/cgal.git "heads/${cgalGitBranch}" | awk '{ print $1}')"
 sfcgalGitHash="$(git ls-remote https://gitlab.com/SFCGAL/SFCGAL.git heads/master | awk '{ print $1}')"
 projGitHash="$(git ls-remote https://github.com/OSGeo/PROJ.git heads/master | awk '{ print $1}')"
@@ -141,6 +141,7 @@ echo " "
 declare -A suitePackageList=() suiteArches=()
 for version in "${versions[@]}"; do
     IFS=- read postgresVersion postgisVersion <<< "$version"
+    postgresVersionMain="$(echo "$postgresVersion" | awk -F 'alpha|beta|rc' '{print $1}')"
 
     echo " "
     echo "---- generate Dockerfile for $version ----"
@@ -153,7 +154,7 @@ for version in "${versions[@]}"; do
         # posgis 2.5 only in the stretch ; no bullseye version
         tag='stretch-slim'
     else
-        tag="${debianSuite[$postgresVersion]:-$defaultDebianSuite}"
+        tag="${debianSuite[$postgresVersionMain]:-$defaultDebianSuite}"
     fi
     suite="${tag%%-slim}"
 
@@ -164,7 +165,6 @@ for version in "${versions[@]}"; do
         suiteArches["$suite"]="$(curl -fsSL "${packagesBase}/${suite}-pgdg/Release" | awk -F ':[[:space:]]+' '$1 == "Architectures" { gsub(/[[:space:]]+/, "|", $2); print $2 }')"
     fi
 
-    postgresVersionMain="$(echo "$postgresVersion" | awk -F 'alpha|beta|rc' '{print $1}')"
     versionList="$(echo "${suitePackageList["$suite"]}"; curl -fsSL "${packagesBase}/${suite}-pgdg/${postgresVersionMain}/binary-amd64/Packages.bz2" | bunzip2)"
     fullVersion="$(echo "$versionList" | awk -F ': ' '$1 == "Package" { pkg = $2 } $1 == "Version" && pkg == "postgresql-'"$postgresVersionMain"'" { print $2; exit }' || true)"
 

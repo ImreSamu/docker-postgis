@@ -2,15 +2,17 @@
 # NOTE: THIS DOCKERFILE IS GENERATED VIA "make update"! PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
-# "Experimental"; solely for testing purposes. Anticipate frequent changes!
+# Experimental image template for current development snapshots. Expect frequent changes.
 # This is a multi-stage Dockerfile, requiring a minimum Docker version of 17.05.
 
 ARG DOCKER_CMAKE_BUILD_TYPE=Release
-ARG CGAL_GIT_BRANCH=6.1.x-branch
+ARG DOCKER_ENABLE_IPO=OFF
+ARG CGAL_GIT_BRANCH=6.2.x-branch
 ARG NPROC=
 FROM docker.io/postgres:16-trixie AS builder
 
 ARG NPROC
+ARG DOCKER_ENABLE_IPO
 
 LABEL maintainer="PostGIS Project - https://postgis.net" \
       org.opencontainers.image.description="PostGIS - master  spatial database extension with PostgreSQL 16 trixie" \
@@ -18,14 +20,13 @@ LABEL maintainer="PostGIS Project - https://postgis.net" \
 
 WORKDIR /
 
-# apt-get install
+# Install runtime libraries needed by source-built components and build tools.
 RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
       curl \
-      # In Trixie, the libboost-all-dev metapackage currently pulls Boost 1.83
-      # development packages, so the runtime Boost packages must come from the
-      # same series.
+      # Keep runtime Boost packages aligned with the Boost development series
+      # selected by libboost-all-dev for this Debian suite.
       libboost-atomic1.83.0 \
       libboost-chrono1.83.0t64 \
       libboost-date-time1.83.0 \
@@ -46,7 +47,7 @@ RUN set -ex \
       libtiff6 \
       libxml2 \
       sqlite3 \
-      # build dependency
+      # build dependencies
       autoconf \
       automake \
       autotools-dev \
@@ -72,7 +73,7 @@ RUN set -ex \
       pkg-config \
       protobuf-c-compiler \
       xsltproc \
-      # gdal+
+      # GDAL optional driver dependencies
       libblosc-dev \
       libcfitsio-dev \
       libfreexl-dev \
@@ -88,15 +89,16 @@ RUN set -ex \
 
 ARG DOCKER_CMAKE_BUILD_TYPE
 ENV DOCKER_CMAKE_BUILD_TYPE=${DOCKER_CMAKE_BUILD_TYPE}
+ENV DOCKER_ENABLE_IPO=${DOCKER_ENABLE_IPO}
 
 # nlohmann/json - header-only library for SFCGAL (with CMake support)
 RUN set -ex \
     && mkdir -p /usr/src \
     && cd /usr/src \
-    # Get the latest release version dynamically
+    # Fetch the latest nlohmann/json release because SFCGAL needs its CMake package.
     && NLOHMANN_JSON_VERSION=$(curl -s https://api.github.com/repos/nlohmann/json/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/') \
     && echo "Installing nlohmann/json version: ${NLOHMANN_JSON_VERSION}" \
-    # Download and extract the full source with CMake support
+    # Use the full source archive; the single-header package has no CMake config.
     && curl -L "https://github.com/nlohmann/json/archive/refs/tags/v${NLOHMANN_JSON_VERSION}.tar.gz" -o nlohmann-json.tar.gz \
     && tar -xzf nlohmann-json.tar.gz \
     && cd "json-${NLOHMANN_JSON_VERSION}" \
@@ -108,11 +110,11 @@ RUN set -ex \
     && rm -rf "json-${NLOHMANN_JSON_VERSION}" nlohmann-json.tar.gz \
     && echo "nlohmann/json ${NLOHMANN_JSON_VERSION} installed with CMake support" > /_pgis_nlohmann_json_version.txt
 
-# cgal & sfcgal
+# CGAL and SFCGAL.
 ARG CGAL_GIT_BRANCH
 ENV CGAL_GIT_BRANCH=${CGAL_GIT_BRANCH}
-ENV CGAL_GIT_HASH=37e2b278910f724e32b55e0ac0d300be1bc79e30
-ENV SFCGAL_GIT_HASH=636b2346c12a61c1b5f82d374a3372a2184f8116
+ENV CGAL_GIT_HASH=3e5b9fcc0e8bda3ebc8f1cca615faf46a84b49c5
+ENV SFCGAL_GIT_HASH=eb9a03daaa5eb018f97da82105121487b2c22564
 RUN set -ex \
     && mkdir -p /usr/src \
     && cd /usr/src \
@@ -137,14 +139,15 @@ RUN set -ex \
     && make -j${NPROC:-$(nproc)} \
     && make install \
     #
-    ## testing with -DSFCGAL_BUILD_TESTS=ON
+    # Optional SFCGAL test hook; disabled by default because the final image
+    # creates and checks the postgis_sfcgal extension downstream.
     # && CTEST_OUTPUT_ON_FAILURE=TRUE ctest \
     #
-    # clean
+    # Clean CGAL/SFCGAL source trees.
     && rm -fr /usr/src/SFCGAL \
     && rm -fr /usr/src/cgal
 
-# proj
+# PROJ.
 ENV PROJ_GIT_HASH=4c7ea9dd514069314417c3db2dde89ba5b8127a8
 RUN set -ex \
     && cd /usr/src \
@@ -152,7 +155,7 @@ RUN set -ex \
     && cd PROJ \
     && git checkout ${PROJ_GIT_HASH} \
     && git log -1 > /_pgis_proj_last_commit.txt \
-    # check the autotools exist? https://github.com/OSGeo/PROJ/pull/3027
+    # Keep the legacy autotools fallback for old PROJ revisions; current PROJ uses CMake.
     && if [ -f "autogen.sh" ] ; then \
         set -eux \
         && echo "autotools version: 'autogen.sh' exists! Older version!"  \
@@ -167,6 +170,9 @@ RUN set -ex \
         && mkdir build \
         && cd build \
         && cmake .. -DCMAKE_BUILD_TYPE=${DOCKER_CMAKE_BUILD_TYPE} -DBUILD_TESTING=OFF \
+            -DENABLE_IPO=${DOCKER_ENABLE_IPO} \
+            -DEMBED_RESOURCE_FILES=ON \
+            -DUSE_ONLY_EMBEDDED_RESOURCE_FILES=OFF \
         && make -j${NPROC:-$(nproc)} \
         && make install \
         ; \
@@ -174,8 +180,8 @@ RUN set -ex \
     \
     && rm -fr /usr/src/PROJ
 
-# geos
-ENV GEOS_GIT_HASH=e704204f34c95c24bfc3a8493c5cda2cbe3fe1c2
+# GEOS.
+ENV GEOS_GIT_HASH=4226b5a034d249e64385d3dac7e69774ff30d6f3
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/libgeos/geos.git \
@@ -190,8 +196,8 @@ RUN set -ex \
     && cd / \
     && rm -fr /usr/src/geos
 
-# gdal
-ENV GDAL_GIT_HASH=cb541139e8c4a6fdf267fff69b9fd57ee2c373fa
+# GDAL.
+ENV GDAL_GIT_HASH=882a6a38a119b77f56dcdab308720498cf69d72d
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/OSGeo/gdal.git \
@@ -199,7 +205,7 @@ RUN set -ex \
     && git checkout ${GDAL_GIT_HASH} \
     && git log -1 > /_pgis_gdal_last_commit.txt \
     \
-    # gdal project directory structure - has been changed !
+    # Support both the old nested gdal/ source layout and the current repository layout.
     && if [ -d "gdal" ] ; then \
         echo "Directory 'gdal' dir exists -> older version!" ; \
         cd gdal ; \
@@ -208,18 +214,20 @@ RUN set -ex \
     fi \
     \
     && if [ -f "./autogen.sh" ]; then \
-        # Building with autoconf ( old/deprecated )
+        # Legacy autoconf build path for old GDAL revisions.
         set -eux \
         && ./autogen.sh \
         && ./configure --disable-static \
         ; \
     else \
-        # Building with cmake
+        # Current GDAL CMake build path.
         set -eux \
         && mkdir build \
         && cd build \
-        # config based on: https://salsa.debian.org/debian-gis-team/gdal/-/blob/master/debian/rules
+        # Keep the enabled GDAL dependencies explicit so source builds do not silently
+        # change feature coverage when Debian package dependencies change.
         && cmake .. -DCMAKE_BUILD_TYPE=${DOCKER_CMAKE_BUILD_TYPE} -DBUILD_TESTING=OFF \
+            -DENABLE_IPO=${DOCKER_ENABLE_IPO} \
             -DBUILD_DOCS=OFF \
             \
             -DGDAL_HIDE_INTERNAL_SYMBOLS=ON \
@@ -246,10 +254,15 @@ RUN set -ex \
             -DGDAL_USE_WEBP=ON \
             -DGDAL_USE_ZSTD=ON \
             \
-            # OFF and Not working https://github.com/OSGeo/gdal/issues/7100
+            # Use GDAL's internal GeoTIFF to avoid external libgeotiff pulling
+            # in a different PROJ library version. GDAL_USE_GEOTIFF=OFF keeps
+            # the external GeoTIFF package disabled; GDAL_USE_GEOTIFF_INTERNAL=ON
+            # keeps internal GeoTIFF support explicit.
+            # See https://github.com/OSGeo/gdal/issues/7100
             # -DRENAME_INTERNAL_GEOTIFF_SYMBOLS=ON \
             -DGDAL_USE_ECW=OFF \
             -DGDAL_USE_GEOTIFF=OFF \
+            -DGDAL_USE_GEOTIFF_INTERNAL=ON \
             -DGDAL_USE_HEIF=OFF \
             -DGDAL_USE_SPATIALITE=OFF \
         ; \
@@ -260,7 +273,7 @@ RUN set -ex \
     && cd / \
     && rm -fr /usr/src/gdal
 
-# Minimal command line test.
+# Minimal command-line smoke test.
 RUN set -ex \
     && ldconfig \
     && cs2cs \
@@ -279,15 +292,16 @@ FROM docker.io/postgres:16-trixie
 
 ARG NPROC
 ARG DOCKER_CMAKE_BUILD_TYPE
+ARG DOCKER_ENABLE_IPO
 ENV DOCKER_CMAKE_BUILD_TYPE=${DOCKER_CMAKE_BUILD_TYPE}
+ENV DOCKER_ENABLE_IPO=${DOCKER_ENABLE_IPO}
 
 RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
       curl \
-      # In Trixie, the libboost-all-dev metapackage currently pulls Boost 1.83
-      # development packages, so the runtime Boost packages must come from the
-      # same series.
+      # Keep runtime Boost packages aligned with the Boost development series
+      # selected by libboost-all-dev for this Debian suite.
       libboost-atomic1.83.0 \
       libboost-chrono1.83.0t64 \
       libboost-date-time1.83.0 \
@@ -310,7 +324,7 @@ RUN set -ex \
       libtiff6 \
       libxml2 \
       sqlite3 \
-      # gdal+
+      # GDAL optional driver runtime dependencies
       libblosc1 \
       libcfitsio10t64 \
       libfreexl1 \
@@ -330,13 +344,13 @@ COPY --from=builder /usr/local /usr/local
 
 ARG CGAL_GIT_BRANCH
 ENV CGAL_GIT_BRANCH=${CGAL_GIT_BRANCH}
-ENV CGAL_GIT_HASH=37e2b278910f724e32b55e0ac0d300be1bc79e30
-ENV SFCGAL_GIT_HASH=636b2346c12a61c1b5f82d374a3372a2184f8116
+ENV CGAL_GIT_HASH=3e5b9fcc0e8bda3ebc8f1cca615faf46a84b49c5
+ENV SFCGAL_GIT_HASH=eb9a03daaa5eb018f97da82105121487b2c22564
 ENV PROJ_GIT_HASH=4c7ea9dd514069314417c3db2dde89ba5b8127a8
-ENV GEOS_GIT_HASH=e704204f34c95c24bfc3a8493c5cda2cbe3fe1c2
-ENV GDAL_GIT_HASH=cb541139e8c4a6fdf267fff69b9fd57ee2c373fa
+ENV GEOS_GIT_HASH=4226b5a034d249e64385d3dac7e69774ff30d6f3
+ENV GDAL_GIT_HASH=882a6a38a119b77f56dcdab308720498cf69d72d
 
-# Minimal command line test ( fail fast )
+# Minimal command-line smoke test (fail fast).
 RUN set -ex \
     && ldconfig \
     && cs2cs \
@@ -348,14 +362,14 @@ RUN set -ex \
     && proj \
     && sfcgal-config --version \
     \
-    # Testing ogr2ogr PostgreSQL driver.
+    # Verify that GDAL built the ogr2ogr PostgreSQL/PostGIS driver.
     && ogr2ogr --formats | grep -q "PostgreSQL/PostGIS" && exit 0 \
             || echo "ogr2ogr missing PostgreSQL driver" && exit 1
 
-# install postgis
-ENV POSTGIS_GIT_HASH=7318e95222b33f24eb606e958eb48fcfef06411f
-ENV H3_PG_GIT_HASH=ab59e4d1608749b9054d61d5a8d2db5c4c1e13ad
-ENV ADDRESS_STANDARDIZER_GIT_HASH=5fae8b3ab2d0c8b3142a1119f2d87b637e16498e
+# Install PostGIS and companion development extensions.
+ENV POSTGIS_GIT_HASH=b8c7b014233d32d61b75dee622fc76c215949427
+ENV H3_PG_GIT_HASH=9d70e9c37e3772b35f4f9c6ec7a307027bc2c130
+ENV ADDRESS_STANDARDIZER_GIT_HASH=84ed4c45b1208fb2f5ea80512cc421ea40549869
 
 RUN set -ex \
     && apt-get update \
@@ -390,15 +404,15 @@ RUN set -ex \
       protobuf-c-compiler \
       xsltproc \
     && cd \
-    # postgis
+    # PostGIS master.
     && cd /usr/src/ \
     && git clone https://github.com/postgis/postgis.git \
     && cd postgis \
     && git checkout ${POSTGIS_GIT_HASH} \
     && git log -1 > /_pgis_last_commit.txt \
     && ./autogen.sh \
-# configure options taken from:
-# https://anonscm.debian.org/cgit/pkg-grass/postgis.git/tree/debian/rules?h=jessie
+# Build PostGIS with LTO; the upstream library stack can opt into IPO separately
+# through DOCKER_ENABLE_IPO.
     && ./configure \
         --enable-lto \
     && make -j${NPROC:-$(nproc)} \
@@ -426,12 +440,13 @@ RUN set -ex \
     && git log -1 > /_pgis_address_standardizer_last_commit.txt \
     && make PG_CONFIG=/usr/lib/postgresql/$PG_MAJOR/bin/pg_config PG_CFLAGS=-Werror with_llvm=no \
     && make PG_CONFIG=/usr/lib/postgresql/$PG_MAJOR/bin/pg_config PG_CFLAGS=-Werror with_llvm=no install \
-# refresh proj data - workarounds: https://trac.osgeo.org/postgis/ticket/5316
+# Refresh selected PROJ grids needed by the PostGIS regression suite.
+# Workaround for https://trac.osgeo.org/postgis/ticket/5316
     && projsync --system-directory --file ch_swisstopo_CHENyx06_ETRS \
     && projsync --system-directory --file us_noaa_eshpgn \
     && projsync --system-directory --file us_noaa_prvi \
     && projsync --system-directory --file us_noaa_wmhpgn \
-# regress check
+# Regression checks.
     && mkdir /tempdb \
     && chown -R postgres:postgres /tempdb \
     && su postgres -c 'pg_ctl -D /tempdb init' \
@@ -463,7 +478,7 @@ RUN set -ex \
     && rm -rf /tempdb \
     && rm -rf /tmp/logfile \
     && rm -rf /tmp/pgis_reg \
-# clean
+# Clean build dependencies and source trees.
     && cd / \
     && rm -rf /usr/src/postgis \
     && rm -rf /usr/src/h3-pg \
@@ -503,7 +518,7 @@ RUN mkdir -p /docker-entrypoint-initdb.d
 COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/10_postgis.sh
 COPY ./update-postgis.sh /usr/local/bin
 
-# last final test
+# Final smoke test.
 RUN set -ex \
     && ldconfig \
     && cs2cs \
@@ -519,7 +534,7 @@ RUN set -ex \
     #   https://github.com/postgis/docker-postgis/issues/307
     && dpkg-query -W -f='${Status}' ca-certificates 2>/dev/null | grep -c "ok installed" \
     \
-    # list last commits.
+    # List last commits.
     && find /_pgis_*_last_commit.txt -type f -print -exec cat {} \;  \
-    # list postgresql, postgis version
+    # List PostgreSQL and PostGIS version details.
     && cat _pgis_full_version.txt
