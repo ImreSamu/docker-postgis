@@ -96,7 +96,7 @@ jobs:
     env:
       VERSION: ${{ matrix.postgres }}-${{ matrix.postgis }}
       VARIANT: ${{ matrix.variant }}
-      DOCKER_APT_PKG_VER: '5:29.2.1-1~ubuntu.24.04~noble'
+      DOCKER_APT_PKG_VER: '5:29.6.0-1~ubuntu.24.04~noble'
 
     steps:
     - name: Install/config specific version of Docker packages
@@ -144,13 +144,19 @@ jobs:
         docker images --tree
 
     - name: Checkout source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
+
+    - name: Re-generate current ${{ env.VERSION }} Dockerfile with the latest Git hashes
+      if: ${{ matrix.postgis == 'master' }}
+      run: |
+        ./update.sh "${VERSION}"
+        git diff
 
     - name: Build docker image for ${{ env.VERSION }} ${{ env.VARIANT }}
       run: make test
 
     - name: Login to dockerhub
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       if: ${{ (github.repository == 'postgis/docker-postgis') && (github.ref == 'refs/heads/master') && (github.event_name != 'pull_request') }}
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}

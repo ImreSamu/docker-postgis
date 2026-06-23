@@ -2,6 +2,7 @@
 # NOTE: THIS DOCKERFILE IS GENERATED VIA "make update"! PLEASE DO NOT EDIT IT DIRECTLY.
 #
 
+# Rolling *-master CI builds regenerate this file with current upstream Git revisions, so this checked-in copy may not match the latest published image.
 # Experimental image template for current development snapshots. Expect frequent changes.
 # This is a multi-stage Dockerfile, requiring a minimum Docker version of 17.05.
 
@@ -148,7 +149,7 @@ RUN set -ex \
     && rm -fr /usr/src/cgal
 
 # PROJ.
-ENV PROJ_GIT_HASH=4c7ea9dd514069314417c3db2dde89ba5b8127a8
+ENV PROJ_GIT_HASH=3ae41cbe97537c3db30948a28d4fb48bbd81d1ae
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/OSGeo/PROJ.git \
@@ -181,7 +182,7 @@ RUN set -ex \
     && rm -fr /usr/src/PROJ
 
 # GEOS.
-ENV GEOS_GIT_HASH=4226b5a034d249e64385d3dac7e69774ff30d6f3
+ENV GEOS_GIT_HASH=b7e11f5710ace681562228b791651bbc28835986
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/libgeos/geos.git \
@@ -197,7 +198,7 @@ RUN set -ex \
     && rm -fr /usr/src/geos
 
 # GDAL.
-ENV GDAL_GIT_HASH=882a6a38a119b77f56dcdab308720498cf69d72d
+ENV GDAL_GIT_HASH=a165dfda1ba98f7caff735ec16659eb62b4686e7
 RUN set -ex \
     && cd /usr/src \
     && git clone https://github.com/OSGeo/gdal.git \
@@ -346,9 +347,9 @@ ARG CGAL_GIT_BRANCH
 ENV CGAL_GIT_BRANCH=${CGAL_GIT_BRANCH}
 ENV CGAL_GIT_HASH=3e5b9fcc0e8bda3ebc8f1cca615faf46a84b49c5
 ENV SFCGAL_GIT_HASH=eb9a03daaa5eb018f97da82105121487b2c22564
-ENV PROJ_GIT_HASH=4c7ea9dd514069314417c3db2dde89ba5b8127a8
-ENV GEOS_GIT_HASH=4226b5a034d249e64385d3dac7e69774ff30d6f3
-ENV GDAL_GIT_HASH=882a6a38a119b77f56dcdab308720498cf69d72d
+ENV PROJ_GIT_HASH=3ae41cbe97537c3db30948a28d4fb48bbd81d1ae
+ENV GEOS_GIT_HASH=b7e11f5710ace681562228b791651bbc28835986
+ENV GDAL_GIT_HASH=a165dfda1ba98f7caff735ec16659eb62b4686e7
 
 # Minimal command-line smoke test (fail fast).
 RUN set -ex \
@@ -367,7 +368,7 @@ RUN set -ex \
             || echo "ogr2ogr missing PostgreSQL driver" && exit 1
 
 # Install PostGIS and companion development extensions.
-ENV POSTGIS_GIT_HASH=b8c7b014233d32d61b75dee622fc76c215949427
+ENV POSTGIS_GIT_HASH=ac4a2e171257465041ccdd4065b0378d2f1e834f
 ENV H3_PG_GIT_HASH=9d70e9c37e3772b35f4f9c6ec7a307027bc2c130
 ENV ADDRESS_STANDARDIZER_GIT_HASH=84ed4c45b1208fb2f5ea80512cc421ea40549869
 
